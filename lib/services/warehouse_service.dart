@@ -31,6 +31,11 @@ abstract class WarehouseService {
     required int physicalQuantity,
     String? notes,
   });
+  Future<Order> createOrder({
+    required String customerName,
+    required String salesStaffId,
+    required List<OrderItem> items,
+  });
 }
 
 class SupabaseWarehouseService implements WarehouseService {
@@ -219,6 +224,42 @@ class SupabaseWarehouseService implements WarehouseService {
     }).select('*, products(*), batches(*), profiles(display_name)').single();
 
     return PhysicalAudit.fromJson(response);
+  }
+
+  @override
+  Future<Order> createOrder({
+    required String customerName,
+    required String salesStaffId,
+    required List<OrderItem> items,
+  }) async {
+    // Insert order header
+    final orderResponse = await _client.from('orders').insert({
+      'customer_name': customerName,
+      'status': 'pending',
+      'sales_staff_id': salesStaffId,
+    }).select().single();
+
+    final orderId = orderResponse['id'] as String;
+
+    // Insert order items
+    final List<Map<String, dynamic>> itemsJson = items.map((item) => {
+      'order_id': orderId,
+      'product_id': item.productId,
+      'quantity': item.quantity,
+      'product_name': item.productName,
+      'product_price': item.productPrice,
+    }).toList();
+
+    await _client.from('order_items').insert(itemsJson);
+
+    // Fetch full order
+    final response = await _client
+        .from('orders')
+        .select('*, order_items(*)')
+        .eq('id', orderId)
+        .single();
+        
+    return Order.fromJson(response);
   }
 }
 
@@ -481,5 +522,38 @@ class MockWarehouseService implements WarehouseService {
     }
 
     return newAudit;
+  }
+
+  @override
+  Future<Order> createOrder({
+    required String customerName,
+    required String salesStaffId,
+    required List<OrderItem> items,
+  }) async {
+    await Future.delayed(const Duration(milliseconds: 600));
+    final orderId = 'o_${DateTime.now().millisecondsSinceEpoch}';
+
+    final populatedItems = items.map((item) {
+      return OrderItem(
+        id: 'oi_${DateTime.now().millisecondsSinceEpoch}_${item.productId}',
+        orderId: orderId,
+        productId: item.productId,
+        quantity: item.quantity,
+        productName: item.productName,
+        productPrice: item.productPrice,
+      );
+    }).toList();
+
+    final newOrder = Order(
+      id: orderId,
+      customerName: customerName,
+      status: OrderStatus.pending,
+      salesStaffId: salesStaffId,
+      createdAt: DateTime.now(),
+      items: populatedItems,
+    );
+
+    _orders.add(newOrder);
+    return newOrder;
   }
 }

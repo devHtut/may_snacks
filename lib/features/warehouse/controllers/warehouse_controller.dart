@@ -15,6 +15,9 @@ class WarehouseController extends ChangeNotifier {
   List<DisposalRequest> _disposals = [];
   List<PhysicalAudit> _audits = [];
 
+  // Cart state for mobile sales ordering
+  final Map<String, int> _cart = {};
+
   bool _isLoading = false;
   String? _errorMessage;
 
@@ -25,9 +28,71 @@ class WarehouseController extends ChangeNotifier {
   List<Order> get orders => _orders;
   List<DisposalRequest> get disposals => _disposals;
   List<PhysicalAudit> get audits => _audits;
+  
+  Map<String, int> get cart => _cart;
+  int get cartItemCount => _cart.values.fold(0, (sum, qty) => sum + qty);
 
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
+
+  void updateCartItem(String productId, int quantity) {
+    if (quantity <= 0) {
+      _cart.remove(productId);
+    } else {
+      _cart[productId] = quantity;
+    }
+    notifyListeners();
+  }
+
+  void clearCart() {
+    _cart.clear();
+    notifyListeners();
+  }
+
+  Future<bool> submitOrder({
+    required String customerName,
+    required String salesStaffId,
+  }) async {
+    if (_cart.isEmpty || customerName.trim().isEmpty) {
+      _errorMessage = 'Customer name and order items cannot be empty.';
+      notifyListeners();
+      return false;
+    }
+
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      final List<OrderItem> items = [];
+      for (final entry in _cart.entries) {
+        final product = _products.firstWhere((p) => p.id == entry.key);
+        items.add(OrderItem(
+          id: '',
+          orderId: '',
+          productId: entry.key,
+          quantity: entry.value,
+          productName: product.name,
+          productPrice: product.price,
+        ));
+      }
+
+      await _service.createOrder(
+        customerName: customerName.trim(),
+        salesStaffId: salesStaffId,
+        items: items,
+      );
+
+      _cart.clear();
+      await loadAllWarehouseData();
+      return true;
+    } catch (e) {
+      _errorMessage = e.toString().replaceAll('Exception: ', '');
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    }
+  }
 
   Future<void> loadAllWarehouseData() async {
     _isLoading = true;
