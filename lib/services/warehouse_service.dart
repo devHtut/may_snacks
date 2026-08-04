@@ -37,6 +37,7 @@ abstract class WarehouseService {
     required List<OrderItem> items,
   });
   Future<void> cancelOrder(String orderId);
+  Future<void> updateOrderStatus(String orderId, OrderStatus status);
 }
 
 class SupabaseWarehouseService implements WarehouseService {
@@ -266,6 +267,14 @@ class SupabaseWarehouseService implements WarehouseService {
   Future<void> cancelOrder(String orderId) async {
     // Only allow deletion if the order is still pending
     await _client.from('orders').delete().eq('id', orderId).eq('status', 'pending');
+  }
+
+  @override
+  Future<void> updateOrderStatus(String orderId, OrderStatus status) async {
+    await _client
+        .from('orders')
+        .update({'status': status.key})
+        .eq('id', orderId);
   }
 }
 
@@ -567,5 +576,14 @@ class MockWarehouseService implements WarehouseService {
   Future<void> cancelOrder(String orderId) async {
     await Future.delayed(const Duration(milliseconds: 300));
     _orders.removeWhere((o) => o.id == orderId && o.status == OrderStatus.pending);
+  }
+
+  @override
+  Future<void> updateOrderStatus(String orderId, OrderStatus status) async {
+    await Future.delayed(const Duration(milliseconds: 300));
+    final index = _orders.indexWhere((o) => o.id == orderId);
+    if (index != -1) {
+      _orders[index] = _orders[index].copyWith(status: status);
+    }
   }
 }

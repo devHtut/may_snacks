@@ -252,4 +252,21 @@ class WarehouseController extends ChangeNotifier {
       return false;
     }
   }
+
+  Future<bool> updateOrderStatus(String orderId, OrderStatus status) async {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      await _service.updateOrderStatus(orderId, status);
+      await loadAllWarehouseData();
+      return true;
+    } catch (e) {
+      _errorMessage = e.toString().replaceAll('Exception: ', '');
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    }
+  }
 }

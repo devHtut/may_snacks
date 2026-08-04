@@ -55,11 +55,13 @@ WITH CHECK (
   )
 );
 
--- Delete: Admins only
-CREATE POLICY "Allow delete access to orders for admins only"
+-- Delete: Admins, and Sales Staff can cancel their own pending orders
+CREATE POLICY "Allow delete access to orders"
 ON public.orders FOR DELETE
 TO authenticated
-USING (public.is_admin());
+USING (
+  (sales_staff_id = auth.uid() AND status = 'pending') OR public.is_admin()
+);
 
 CREATE TABLE IF NOT EXISTS public.order_items (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

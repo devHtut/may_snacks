@@ -80,5 +80,43 @@ void main() {
 
       expect(newOrder.totalAmount, equals(10 * 1500.0 + 5 * 1200.0)); // Ks 21000
     });
+
+    test('Canceling a pending order removes it from the list', () async {
+      await controller.loadAllWarehouseData();
+      final initialOrdersCount = controller.orders.length;
+
+      // Add and submit
+      controller.updateCartItem('p1', 2);
+      await controller.submitOrder(customerName: 'Cancel Test Store', salesStaffId: 's1');
+      expect(controller.orders.length, equals(initialOrdersCount + 1));
+
+      final placedOrder = controller.orders.last;
+      expect(placedOrder.status, equals(OrderStatus.pending));
+
+      // Cancel order
+      final cancelSuccess = await controller.cancelOrder(placedOrder.id);
+      expect(cancelSuccess, isTrue);
+      
+      // The order should now be removed from the list
+      expect(controller.orders.any((o) => o.id == placedOrder.id), isFalse);
+    });
+
+    test('Updating order status changes status correctly', () async {
+      await controller.loadAllWarehouseData();
+
+      // Create a pending order
+      controller.updateCartItem('p2', 3);
+      await controller.submitOrder(customerName: 'Status Test Store', salesStaffId: 's1');
+      final order = controller.orders.last;
+
+      // Fulfill to pack it
+      await controller.fulfillOrder(order.id);
+      expect(controller.orders.firstWhere((o) => o.id == order.id).status, equals(OrderStatus.packed));
+
+      // Mark as delivered
+      final updateSuccess = await controller.updateOrderStatus(order.id, OrderStatus.delivered);
+      expect(updateSuccess, isTrue);
+      expect(controller.orders.firstWhere((o) => o.id == order.id).status, equals(OrderStatus.delivered));
+    });
   });
 }

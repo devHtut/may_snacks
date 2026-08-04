@@ -8,6 +8,7 @@ import 'tabs/order_fulfillment_tab.dart';
 import 'tabs/expiry_tracking_tab.dart';
 import 'tabs/disposal_requests_tab.dart';
 import 'tabs/stock_audit_tab.dart';
+import 'tabs/order_history_tab.dart';
 
 class WarehouseDashboard extends StatefulWidget {
   const WarehouseDashboard({super.key});
@@ -31,6 +32,7 @@ class _WarehouseDashboardState extends State<WarehouseDashboard> {
     const ProductsTab(),
     const StockInTab(),
     const OrderFulfillmentTab(),
+    const OrderHistoryTab(),
     const ExpiryTrackingTab(),
     const DisposalRequestsTab(),
     const StockAuditTab(),
@@ -97,6 +99,11 @@ class _WarehouseDashboardState extends State<WarehouseDashboard> {
                 icon: Icon(Icons.assignment_outlined),
                 selectedIcon: Icon(Icons.assignment_rounded),
                 label: Text('Orders Queue'),
+              ),
+              NavigationRailDestination(
+                icon: Icon(Icons.history_outlined),
+                selectedIcon: Icon(Icons.history_rounded),
+                label: Text('Order History'),
               ),
               NavigationRailDestination(
                 icon: Icon(Icons.hourglass_empty_outlined),
