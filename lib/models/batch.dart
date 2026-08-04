@@ -33,6 +33,10 @@ class StockBatch {
     return exp.difference(today).inDays;
   }
 
+  bool get isExpiringSoon {
+    return !isExpired && daysUntilExpiry <= 30;
+  }
+
   factory StockBatch.fromJson(Map<String, dynamic> json) {
     return StockBatch(
       id: json['id'] as String,
