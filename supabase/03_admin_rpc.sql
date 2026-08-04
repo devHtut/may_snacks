@@ -27,10 +27,14 @@ BEGIN
   hashed_password := extensions.crypt(user_password, extensions.gen_salt('bf'));
 
   -- Insert user into auth.users (Supabase Auth schema)
+  -- We explicitly populate system token columns with empty strings and booleans with false
+  -- to prevent Supabase GoTrue from throwing "Database error querying schema" due to NULL scans.
   INSERT INTO auth.users (
     instance_id, id, email, encrypted_password, email_confirmed_at, 
     raw_app_meta_data, raw_user_meta_data, created_at, updated_at, 
-    role, aud, confirmation_token
+    role, aud, confirmation_token, email_change, email_change_token_new,
+    recovery_token, email_change_token_current, phone_change,
+    phone_change_token, reauthentication_token, is_sso_user, is_anonymous
   ) VALUES (
     '00000000-0000-0000-0000-000000000000',
     new_user_id,
@@ -43,7 +47,16 @@ BEGIN
     now(),
     'authenticated',
     'authenticated',
-    ''
+    '', -- confirmation_token
+    '', -- email_change
+    '', -- email_change_token_new
+    '', -- recovery_token
+    '', -- email_change_token_current
+    '', -- phone_change
+    '', -- phone_change_token
+    '', -- reauthentication_token
+    false, -- is_sso_user
+    false -- is_anonymous
   );
 
   RETURN new_user_id;
