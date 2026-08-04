@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../auth/controllers/auth_controller.dart';
+import '../../warehouse/controllers/warehouse_controller.dart';
 import '../controllers/admin_controller.dart';
 import 'tabs/user_management_tab.dart';
 import 'tabs/product_catalog_tab.dart';
@@ -24,6 +25,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<AdminController>().loadAllAdminData();
+      context.read<WarehouseController>().loadAllWarehouseData();
     });
   }
 
@@ -58,7 +60,10 @@ class _AdminDashboardState extends State<AdminDashboard> {
         backgroundColor: theme.primaryColor,
         actions: [
           IconButton(
-            onPressed: () => context.read<AdminController>().loadAllAdminData(),
+            onPressed: () {
+              context.read<AdminController>().loadAllAdminData();
+              context.read<WarehouseController>().loadAllWarehouseData();
+            },
             icon: const Icon(Icons.refresh_rounded, color: Colors.white),
             tooltip: 'Refresh All Data',
           ),
