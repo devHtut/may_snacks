@@ -32,7 +32,7 @@ class _PasswordResetScreenState extends State<PasswordResetScreen> {
     if (success && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text('စကားဝှက်အသစ် ပြောင်းလဲခြင်း အောင်မြင်ပါသည်။'),
+          content: const Text('Password reset successful.'),
           backgroundColor: Colors.green,
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -41,7 +41,7 @@ class _PasswordResetScreenState extends State<PasswordResetScreen> {
     } else if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(controller.errorMessage ?? 'စကားဝှက်ပြောင်းလဲရန် မအောင်မြင်ပါ။'),
+          content: Text(controller.errorMessage ?? 'Failed to reset password.'),
           backgroundColor: Colors.redAccent,
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -70,7 +70,7 @@ class _PasswordResetScreenState extends State<PasswordResetScreen> {
           IconButton(
             onPressed: isLoading ? null : _handleLogout,
             icon: const Icon(Icons.logout_rounded),
-            tooltip: 'အကောင့်ထွက်မည်',
+            tooltip: 'Logout',
           ),
         ],
       ),
@@ -105,7 +105,7 @@ class _PasswordResetScreenState extends State<PasswordResetScreen> {
                       const SizedBox(height: 24),
                       Center(
                         child: Text(
-                          'စကားဝှက် ပြောင်းလဲရန် လိုအပ်သည်',
+                          'Password Reset Required',
                           textAlign: TextAlign.center,
                           style: theme.textTheme.titleLarge?.copyWith(
                             fontWeight: FontWeight.bold,
@@ -115,7 +115,7 @@ class _PasswordResetScreenState extends State<PasswordResetScreen> {
                       const SizedBox(height: 12),
                       Center(
                         child: Text(
-                          'မင်္ဂလာပါ ${userProfile?.displayName ?? ''}၊ သင်သည် ယခုအကောင့်အား ယာယီစကားဝှက်ဖြင့် ပထမဆုံးအကြိမ် ဝင်ရောက်နေခြင်း (သို့မဟုတ်) စကားဝှက် အသစ်သတ်မှတ်ရန် လိုအပ်နေခြင်း ဖြစ်သောကြောင့် အောက်တွင် အသစ်သတ်မှတ်ပေးပါ။',
+                          'Hi ${userProfile?.displayName ?? ''}, you are signed in with a temporary password. Please update your password below to secure your account.',
                           textAlign: TextAlign.center,
                           style: theme.textTheme.bodyMedium?.copyWith(
                             height: 1.5,
@@ -126,7 +126,7 @@ class _PasswordResetScreenState extends State<PasswordResetScreen> {
                       
                       // New Password Field
                       Text(
-                        'စကားဝှက်အသစ် (New Password)',
+                        'New Password',
                         style: TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.bold,
@@ -140,18 +140,18 @@ class _PasswordResetScreenState extends State<PasswordResetScreen> {
                         textInputAction: TextInputAction.next,
                         validator: (val) {
                           if (val == null || val.isEmpty) {
-                            return 'စကားဝှက်အသစ် ဖြည့်စွက်ပါ။';
+                            return 'Please enter a new password.';
                           }
                           if (val.length < 6) {
-                            return 'စကားဝှက်သည် အနည်းဆုံး ၆ လုံး ရှိရပါမည်။';
+                            return 'Password must be at least 6 characters.';
                           }
                           if (val == 'admin123' || val == 'warehouse123' || val == 'sales123') {
-                            return 'ယာယီစကားဝှက်ဟောင်းကို မသုံးပါနှင့်။ စကားဝှက်အသစ် သုံးပါ။';
+                            return 'Do not use default credentials. Enter a new password.';
                           }
                           return null;
                         },
                         decoration: InputDecoration(
-                          hintText: 'အနည်းဆုံး ၆ လုံး',
+                          hintText: 'Minimum 6 characters',
                           prefixIcon: const Icon(Icons.lock_outline),
                           suffixIcon: IconButton(
                             icon: Icon(
@@ -169,7 +169,7 @@ class _PasswordResetScreenState extends State<PasswordResetScreen> {
                       
                       // Confirm Password Field
                       Text(
-                        'စကားဝှက်အသစ်ကို ထပ်မံရိုက်ထည့်ပါ (Confirm Password)',
+                        'Confirm New Password',
                         style: TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.bold,
@@ -184,15 +184,15 @@ class _PasswordResetScreenState extends State<PasswordResetScreen> {
                         onFieldSubmitted: (_) => _handleReset(),
                         validator: (val) {
                           if (val == null || val.isEmpty) {
-                            return 'စကားဝှက်ကို ထပ်မံဖြည့်စွက်ပါ။';
+                            return 'Please confirm your new password.';
                           }
                           if (val != _newPasswordController.text) {
-                            return 'စကားဝှက်များ ကိုက်ညီမှု မရှိပါ။';
+                            return 'Passwords do not match.';
                           }
                           return null;
                         },
                         decoration: InputDecoration(
-                          hintText: 'စကားဝှက်အသစ် ပြန်ရိုက်ပါ',
+                          hintText: 'Re-enter new password',
                           prefixIcon: const Icon(Icons.lock_clock_outlined),
                           suffixIcon: IconButton(
                             icon: Icon(
@@ -222,7 +222,7 @@ class _PasswordResetScreenState extends State<PasswordResetScreen> {
                                     valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                                   ),
                                 )
-                              : const Text('စကားဝှက်အသစ် အတည်ပြုမည်'),
+                              : const Text('Confirm Password Reset'),
                         ),
                       ),
                     ],

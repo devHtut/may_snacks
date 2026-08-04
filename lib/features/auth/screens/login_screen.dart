@@ -34,7 +34,7 @@ class _LoginScreenState extends State<LoginScreen> {
     if (!success && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(controller.errorMessage ?? 'ဝင်ရောက်ခြင်း မအောင်မြင်ပါ။'),
+          content: Text(controller.errorMessage ?? 'Authentication failed.'),
           backgroundColor: Colors.redAccent,
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -135,14 +135,14 @@ class _LoginScreenState extends State<LoginScreen> {
                                 ),
                                 const SizedBox(height: 16),
                                 Text(
-                                  'မေမုန့်တိုက် (May Snacks)',
+                                  'May Snacks',
                                   style: theme.textTheme.headlineMedium?.copyWith(
                                     fontWeight: FontWeight.w900,
                                   ),
                                 ),
                                 const SizedBox(height: 8),
                                 Text(
-                                  'စနစ်ထဲသို့ ဝင်ရောက်ပါ',
+                                  'Sign in to your account',
                                   style: theme.textTheme.bodyMedium,
                                 ),
                               ],
@@ -151,7 +151,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           const SizedBox(height: 48),
                           // Email Field
                           Text(
-                            'အီးမေးလ်လိပ်စာ (Email)',
+                            'Email Address',
                             style: TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.bold,
@@ -165,10 +165,10 @@ class _LoginScreenState extends State<LoginScreen> {
                             textInputAction: TextInputAction.next,
                             validator: (val) {
                               if (val == null || val.trim().isEmpty) {
-                                return 'အီးမေးလ် ဖြည့်စွက်ရန် လိုအပ်ပါသည်။';
+                                return 'Email is required.';
                               }
                               if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(val.trim())) {
-                                return 'မှန်ကန်သော အီးမေးလ်ပုံစံ ဖြည့်စွက်ပါ။';
+                                return 'Please enter a valid email address.';
                               }
                               return null;
                             },
@@ -180,7 +180,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           const SizedBox(height: 24),
                           // Password Field
                           Text(
-                            'စကားဝှက် (Password)',
+                            'Password',
                             style: TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.bold,
@@ -195,7 +195,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             onFieldSubmitted: (_) => _handleLogin(),
                             validator: (val) {
                               if (val == null || val.isEmpty) {
-                                return 'စကားဝှက် ဖြည့်စွက်ရန် လိုအပ်ပါသည်။';
+                                return 'Password is required.';
                               }
                               return null;
                             },
@@ -229,7 +229,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                         valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                                       ),
                                     )
-                                  : const Text('စနစ်ထဲသို့ ဝင်မည်'),
+                                  : const Text('Sign In'),
                             ),
                           ),
                         ],

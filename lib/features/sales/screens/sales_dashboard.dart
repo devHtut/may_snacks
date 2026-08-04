@@ -17,7 +17,7 @@ class SalesDashboard extends StatelessWidget {
             const Icon(Icons.directions_bike_rounded, color: Colors.white),
             const SizedBox(width: 10),
             Text(
-              'Sales Staff Panel (အရောင်း ကိုယ်စားလှယ်)',
+              'Sales Panel (Field Operations)',
               style: theme.textTheme.titleLarge?.copyWith(color: Colors.white),
             ),
           ],
@@ -27,7 +27,7 @@ class SalesDashboard extends StatelessWidget {
           IconButton(
             onPressed: () => context.read<AuthController>().logout(),
             icon: const Icon(Icons.logout_rounded, color: Colors.white),
-            tooltip: 'အကောင့်ထွက်မည်',
+            tooltip: 'Logout',
           ),
         ],
       ),
@@ -53,12 +53,12 @@ class SalesDashboard extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'မင်္ဂလာပါ၊ ${userProfile?.displayName ?? 'Sales Staff'}',
+                            'Welcome, ${userProfile?.displayName ?? 'Sales Staff'}',
                             style: theme.textTheme.titleLarge,
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            'အီးမေးလ်: ${userProfile?.email ?? ''} | ရာထူး: Sales Staff (အရောင်းဝန်ထမ်း)',
+                            'Email: ${userProfile?.email ?? ''} | Role: Sales Staff',
                             style: theme.textTheme.bodyMedium,
                           ),
                         ],
@@ -71,7 +71,7 @@ class SalesDashboard extends StatelessWidget {
             const SizedBox(height: 32),
             
             Text(
-              'နေ့စဉ် လုပ်ဆောင်ချက်များ (Field Actions)',
+              'Field Actions',
               style: theme.textTheme.titleLarge,
             ),
             const SizedBox(height: 16),
@@ -86,30 +86,30 @@ class SalesDashboard extends StatelessWidget {
                   _buildFeatureCard(
                     context: context,
                     icon: Icons.add_shopping_cart_rounded,
-                    title: 'အော်ဒါကောက်ယူခြင်း\n(Order Entry)',
+                    title: 'Order Placement\n(Order Entry)',
                     color: Colors.orange,
-                    desc: 'ဆိုင်များတွင် ကိုယ်တိုင် အော်ဒါကောက်ယူရန်။',
+                    desc: 'Record and place retail orders directly from the field.',
                   ),
                   _buildFeatureCard(
                     context: context,
                     icon: Icons.history_edu_rounded,
-                    title: 'မိမိအော်ဒါများ စောင့်ကြည့်ရန်\n(My Orders & Status)',
+                    title: 'My Orders\n(& Dispatch Status)',
                     color: Colors.blue,
-                    desc: 'မိမိကောက်ယူထားသော အော်ဒါများ၏ Status (Packed စသည်) ကို ခြေရာခံရန်။',
+                    desc: 'Track status and updates of orders placed by you.',
                   ),
                   _buildFeatureCard(
                     context: context,
                     icon: Icons.category_rounded,
-                    title: 'ပစ္စည်းနှင့် ဈေးနှုန်းဇယား\n(Products & Master Prices)',
+                    title: 'Product Catalog\n(& Prices)',
                     color: Colors.purple,
-                    desc: 'မုန့်အမျိုးအစားများနှင့် သတ်မှတ်ထားသော ဈေးနှုန်းများကို ကြည့်ရှုရန်။',
+                    desc: 'Browse product lines, stock options, and active prices.',
                   ),
                   _buildFeatureCard(
                     context: context,
                     icon: Icons.analytics_outlined,
-                    title: 'အရောင်းမှတ်တမ်းများ\n(My Sales Reports)',
+                    title: 'Sales Reports\n(& Performance)',
                     color: Colors.teal,
-                    desc: 'မိမိတာဝန်ယူထားသော ဆိုင်များ၏ အရောင်းစာရင်းနှင့် အစီရင်ခံစာများ ကြည့်ရှုရန်။',
+                    desc: 'Review transaction logs and personal sales analytics.',
                   ),
                 ],
               ),
@@ -134,7 +134,7 @@ class SalesDashboard extends StatelessWidget {
         onTap: () {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('$title လုပ်ဆောင်ချက်ကို မကြာမီ ဖြည့်စွက်ပါမည်။'),
+              content: Text('$title feature will be integrated soon.'),
               behavior: SnackBarBehavior.floating,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             ),

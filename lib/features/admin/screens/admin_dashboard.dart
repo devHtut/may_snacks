@@ -45,7 +45,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
         return StatefulBuilder(
           builder: (context, setDialogState) {
             return AlertDialog(
-              title: const Text('အကောင့်သစ် ဖွင့်ပေးရန်'),
+              title: const Text('Create Staff Account'),
               content: SingleChildScrollView(
                 child: Form(
                   key: formKey,
@@ -54,25 +54,25 @@ class _AdminDashboardState extends State<AdminDashboard> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       // Name
-                      const Text('နာမည် (Display Name)'),
+                      const Text('Name (Display Name)'),
                       const SizedBox(height: 6),
                       TextFormField(
                         controller: nameController,
-                        validator: (v) => v == null || v.trim().isEmpty ? 'နာမည် ဖြည့်စွက်ပါ' : null,
-                        decoration: const InputDecoration(hintText: 'ဦးလှ / မစုစု'),
+                        validator: (v) => v == null || v.trim().isEmpty ? 'Please enter a name' : null,
+                        decoration: const InputDecoration(hintText: 'e.g., John Doe'),
                       ),
                       const SizedBox(height: 16),
                       
                       // Email
-                      const Text('အီးမေးလ်လိပ်စာ (Email)'),
+                      const Text('Email Address'),
                       const SizedBox(height: 6),
                       TextFormField(
                         controller: emailController,
                         keyboardType: TextInputType.emailAddress,
                         validator: (v) {
-                          if (v == null || v.trim().isEmpty) return 'အီးမေးလ် ဖြည့်စွက်ပါ';
+                          if (v == null || v.trim().isEmpty) return 'Please enter an email';
                           if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(v.trim())) {
-                            return 'မှန်ကန်သော အီးမေးလ်ပုံစံ ဖြည့်သွင်းပါ';
+                            return 'Enter a valid email address';
                           }
                           return null;
                         },
@@ -81,19 +81,19 @@ class _AdminDashboardState extends State<AdminDashboard> {
                       const SizedBox(height: 16),
 
                       // Password
-                      const Text('ယာယီစကားဝှက် (Temporary Password)'),
+                      const Text('Temporary Password'),
                       const SizedBox(height: 6),
                       TextFormField(
                         controller: passwordController,
-                        validator: (v) => v == null || v.isEmpty || v.length < 6 ? 'အနည်းဆုံး ၆ လုံး' : null,
+                        validator: (v) => v == null || v.isEmpty || v.length < 6 ? 'At least 6 characters' : null,
                         decoration: InputDecoration(
-                          hintText: 'ယာယီစကားဝှက်',
+                          hintText: 'Temporary Password',
                           suffixIcon: IconButton(
                             icon: const Icon(Icons.copy_rounded),
                             onPressed: () {
                               Clipboard.setData(ClipboardData(text: passwordController.text));
                               ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('ယာယီစကားဝှက်ကို Copy ကူးယူပြီးပါပြီ။')),
+                                const SnackBar(content: Text('Temporary password copied to clipboard.')),
                               );
                             },
                           ),
@@ -102,7 +102,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                       const SizedBox(height: 16),
 
                       // Role Dropdown
-                      const Text('ရာထူးအဆင့် (User Role)'),
+                      const Text('Role (User Role)'),
                       const SizedBox(height: 6),
                       DropdownButtonFormField<UserRole>(
                         value: selectedRole,
@@ -130,7 +130,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
               actions: [
                 TextButton(
                   onPressed: dialogLoading ? null : () => Navigator.pop(context),
-                  child: const Text('မလုပ်တော့ပါ'),
+                  child: const Text('Cancel'),
                 ),
                 ElevatedButton(
                   onPressed: dialogLoading
@@ -154,14 +154,14 @@ class _AdminDashboardState extends State<AdminDashboard> {
                             _loadProfiles();
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
-                                content: Text('${nameController.text} အတွက် အကောင့်ဖွင့်လှစ်ခြင်း အောင်မြင်ပါသည်။'),
+                                content: Text('Account successfully created for ${nameController.text}.'),
                                 backgroundColor: Colors.green,
                               ),
                             );
                           } else if (mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
-                                content: Text(controller.errorMessage ?? 'အကောင့်ဖွင့်ရန် မအောင်မြင်ပါ။'),
+                                content: Text(controller.errorMessage ?? 'Failed to create account.'),
                                 backgroundColor: Colors.redAccent,
                               ),
                             );
@@ -169,7 +169,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                         },
                   child: dialogLoading
                       ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation<Color>(Colors.white)))
-                      : const Text('အကောင့်ဖွင့်မည်'),
+                      : const Text('Create Account'),
                 ),
               ],
             );
@@ -191,28 +191,28 @@ class _AdminDashboardState extends State<AdminDashboard> {
         return StatefulBuilder(
           builder: (context, setDialogState) {
             return AlertDialog(
-              title: Text('${user.displayName} အတွက် စကားဝှက် ပြန်ထုတ်ရန်'),
+              title: Text('Reset Password for ${user.displayName}'),
               content: Form(
                 key: formKey,
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('အကောင့်အီးမေးလ်: ${user.email}'),
+                    Text('User Email: ${user.email}'),
                     const SizedBox(height: 16),
-                    const Text('ယာယီစကားဝှက်အသစ် (New Temp Password)'),
+                    const Text('New Temporary Password'),
                     const SizedBox(height: 6),
                     TextFormField(
                       controller: passwordController,
-                      validator: (v) => v == null || v.isEmpty || v.length < 6 ? 'အနည်းဆုံး ၆ လုံး' : null,
+                      validator: (v) => v == null || v.isEmpty || v.length < 6 ? 'At least 6 characters' : null,
                       decoration: InputDecoration(
-                        hintText: 'ယာယီစကားဝှက်အသစ်',
+                        hintText: 'New Temporary Password',
                         suffixIcon: IconButton(
                           icon: const Icon(Icons.copy_rounded),
                           onPressed: () {
                             Clipboard.setData(ClipboardData(text: passwordController.text));
                             ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('ယာယီစကားဝှက်အသစ်ကို Copy ကူးယူပြီးပါပြီ။')),
+                              const SnackBar(content: Text('New temporary password copied to clipboard.')),
                             );
                           },
                         ),
@@ -224,7 +224,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
               actions: [
                 TextButton(
                   onPressed: dialogLoading ? null : () => Navigator.pop(context),
-                  child: const Text('မလုပ်တော့ပါ'),
+                  child: const Text('Cancel'),
                 ),
                 ElevatedButton(
                   onPressed: dialogLoading
@@ -246,14 +246,14 @@ class _AdminDashboardState extends State<AdminDashboard> {
                             _loadProfiles();
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
-                                content: Text('စကားဝှက်အသစ် ပြန်ထုတ်ပေးခြင်း အောင်မြင်ပြီး ယာယီစကားဝှက်အခြေအနေ ပြောင်းလိုက်ပါပြီ။'),
+                                content: Text('New password generated. Forced reset status set.'),
                                 backgroundColor: Colors.green,
                               ),
                             );
                           } else if (mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
-                                content: Text(controller.errorMessage ?? 'စကားဝှက် ပြောင်းလဲရန် မအောင်မြင်ပါ။'),
+                                content: Text(controller.errorMessage ?? 'Failed to reset password.'),
                                 backgroundColor: Colors.redAccent,
                               ),
                             );
@@ -261,7 +261,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                         },
                   child: dialogLoading
                       ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation<Color>(Colors.white)))
-                      : const Text('စကားဝှက်အသစ်သတ်မှတ်မည်'),
+                      : const Text('Reset Password'),
                 ),
               ],
             );
@@ -293,7 +293,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
           IconButton(
             onPressed: () => context.read<AuthController>().logout(),
             icon: const Icon(Icons.logout_rounded, color: Colors.white),
-            tooltip: 'အကောင့်ထွက်မည်',
+            tooltip: 'Logout',
           ),
         ],
       ),
@@ -319,12 +319,12 @@ class _AdminDashboardState extends State<AdminDashboard> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'မင်္ဂလာပါ၊ ${adminProfile?.displayName ?? 'Admin'}',
+                            'Welcome, ${adminProfile?.displayName ?? 'Admin'}',
                             style: theme.textTheme.titleLarge,
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            'အီးမေးလ်: ${adminProfile?.email ?? ''} | အဆင့်အတန်း: Admin (စီမံခန့်ခွဲသူ)',
+                            'Email: ${adminProfile?.email ?? ''} | Role: Admin',
                             style: theme.textTheme.bodyMedium,
                           ),
                         ],
@@ -333,7 +333,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                     ElevatedButton.icon(
                       onPressed: _showCreateUserDialog,
                       icon: const Icon(Icons.person_add_alt_1_rounded),
-                      label: const Text('အကောင့်အသစ်ဖွင့်ရန်'),
+                      label: const Text('Create Account'),
                     ),
                   ],
                 ),
@@ -346,13 +346,13 @@ class _AdminDashboardState extends State<AdminDashboard> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  'ဝန်ထမ်းစာရင်းနှင့် စကားဝှက် စီမံခန့်ခွဲမှု',
+                  'Staff Management & Passwords',
                   style: theme.textTheme.titleLarge,
                 ),
                 IconButton(
                   onPressed: _fetching ? null : _loadProfiles,
                   icon: const Icon(Icons.refresh_rounded),
-                  tooltip: 'စာရင်းပြန်ခေါ်မည်',
+                  tooltip: 'Refresh List',
                 ),
               ],
             ),
@@ -363,7 +363,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
               child: _fetching
                   ? const Center(child: CircularProgressIndicator())
                   : _profiles.isEmpty
-                      ? const Center(child: Text('အကောင့်ဖွင့်ထားသော ဝန်ထမ်းများ မရှိသေးပါ။'))
+                      ? const Center(child: Text('No staff accounts created yet.'))
                       : ListView.separated(
                           itemCount: _profiles.length,
                           separatorBuilder: (context, index) => const SizedBox(height: 12),
@@ -448,7 +448,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                                             Icon(Icons.warning_amber_rounded, size: 14, color: Colors.amber),
                                             SizedBox(width: 4),
                                             Text(
-                                              'စကားဝှက် Reset လုပ်ရန် လိုအပ်ဆဲဖြစ်သည် (Pending Reset)',
+                                              'Pending Password Reset',
                                               style: TextStyle(fontSize: 11, color: Colors.amber, fontWeight: FontWeight.bold),
                                             ),
                                           ],
@@ -467,7 +467,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                                             Icon(Icons.check_circle_outline_rounded, size: 14, color: Colors.green),
                                             SizedBox(width: 4),
                                             Text(
-                                              'အကောင့်အသုံးပြုနိုင်ပါပြီ (Active)',
+                                              'Active',
                                               style: TextStyle(fontSize: 11, color: Colors.green, fontWeight: FontWeight.bold),
                                             ),
                                           ],
@@ -480,7 +480,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                                     : OutlinedButton.icon(
                                         onPressed: () => _showResetPasswordDialog(user),
                                         icon: const Icon(Icons.lock_reset_rounded, size: 18),
-                                        label: const Text('စကားဝှက်အသစ်သတ်မှတ်'),
+                                        label: const Text('Reset Password'),
                                         style: OutlinedButton.styleFrom(
                                           foregroundColor: theme.primaryColor,
                                           side: BorderSide(color: theme.primaryColor),

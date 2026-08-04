@@ -17,7 +17,7 @@ class WarehouseDashboard extends StatelessWidget {
             const Icon(Icons.warehouse_rounded, color: Colors.white),
             const SizedBox(width: 10),
             Text(
-              'Warehouse Panel (ဂိုဒေါင် စီမံခန့်ခွဲမှု)',
+              'Warehouse Panel (Inventory & Operations)',
               style: theme.textTheme.titleLarge?.copyWith(color: Colors.white),
             ),
           ],
@@ -27,7 +27,7 @@ class WarehouseDashboard extends StatelessWidget {
           IconButton(
             onPressed: () => context.read<AuthController>().logout(),
             icon: const Icon(Icons.logout_rounded, color: Colors.white),
-            tooltip: 'အကောင့်ထွက်မည်',
+            tooltip: 'Logout',
           ),
         ],
       ),
@@ -53,12 +53,12 @@ class WarehouseDashboard extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'မင်္ဂလာပါ၊ ${userProfile?.displayName ?? 'Warehouse Manager'}',
+                            'Welcome, ${userProfile?.displayName ?? 'Warehouse Manager'}',
                             style: theme.textTheme.titleLarge,
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            'အီးမေးလ်: ${userProfile?.email ?? ''} | ရာထူး: Warehouse Manager (ဂိုဒေါင်မှူး)',
+                            'Email: ${userProfile?.email ?? ''} | Role: Warehouse Manager',
                             style: theme.textTheme.bodyMedium,
                           ),
                         ],
@@ -71,7 +71,7 @@ class WarehouseDashboard extends StatelessWidget {
             const SizedBox(height: 32),
             
             Text(
-              'နေ့စဉ် လုပ်ဆောင်ချက်များ (Daily Actions)',
+              'Daily Actions',
               style: theme.textTheme.titleLarge,
             ),
             const SizedBox(height: 16),
@@ -86,30 +86,30 @@ class WarehouseDashboard extends StatelessWidget {
                   _buildFeatureCard(
                     context: context,
                     icon: Icons.inventory_2_rounded,
-                    title: 'ကုန်ဝင်စာရင်းသွင်းခြင်း\n(Stock In)',
+                    title: 'Stock Entry\n(Stock In)',
                     color: Colors.teal,
-                    desc: 'ဂိုဒေါင်သို့ ပစ္စည်းအသစ် ရောက်ရှိလာပါက စာရင်းသွင်းရန်။',
+                    desc: 'Record new stock batches arriving at the warehouse.',
                   ),
                   _buildFeatureCard(
                     context: context,
                     icon: Icons.local_shipping_rounded,
-                    title: 'အော်ဒါထုတ်ပေးခြင်း\n(Order Fulfillment)',
+                    title: 'Order Dispatch\n(Fulfillment)',
                     color: Colors.blue,
-                    desc: 'အော်ဒါများကို ပြင်ဆင်ထုပ်ပိုးပြီး Status ပြောင်းလဲရန်။',
+                    desc: 'Prepare, pack, and mark orders as dispatched.',
                   ),
                   _buildFeatureCard(
                     context: context,
                     icon: Icons.hourglass_bottom_rounded,
-                    title: 'သက်တမ်းကုန်ရက် ခြေရာခံခြင်း\n(Expiry FEFO Tracking)',
+                    title: 'Expiry Tracking\n(FEFO System)',
                     color: Colors.orange,
-                    desc: 'FEFO စနစ်ဖြင့် သက်တမ်းကုန်မည့်ရက်များကို စောင့်ကြည့်ရန်။',
+                    desc: 'Monitor batch expiry dates using First-Expired, First-Out.',
                   ),
                   _buildFeatureCard(
                     context: context,
                     icon: Icons.delete_sweep_rounded,
-                    title: 'ပျက်စီးစာရင်း ပယ်ဖျက်ရန် တင်ပြခြင်း\n(Disposal Request)',
+                    title: 'Damage / Expiry\n(Disposal Request)',
                     color: Colors.redAccent,
-                    desc: 'ကုန်ပစ္စည်းပျက်စီး/သက်တမ်းကုန်များ စာရင်းပယ်ဖျက်ရန် Admin ထံ တင်ပြရန်။',
+                    desc: 'Request admin approval for writing off damaged or expired stock.',
                   ),
                 ],
               ),
@@ -134,7 +134,7 @@ class WarehouseDashboard extends StatelessWidget {
         onTap: () {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('$title လုပ်ဆောင်ချက်ကို မကြာမီ ဖြည့်စွက်ပါမည်။'),
+              content: Text('$title feature will be integrated soon.'),
               behavior: SnackBarBehavior.floating,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             ),
