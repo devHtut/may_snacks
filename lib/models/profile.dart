@@ -44,6 +44,7 @@ class UserProfile {
   final UserRole role;
   final String displayName;
   final bool requiresPasswordReset;
+  final bool isActive;
 
   UserProfile({
     required this.id,
@@ -51,6 +52,7 @@ class UserProfile {
     required this.role,
     required this.displayName,
     required this.requiresPasswordReset,
+    this.isActive = true,
   });
 
   factory UserProfile.fromJson(Map<String, dynamic> json) {
@@ -60,6 +62,7 @@ class UserProfile {
       role: UserRole.fromKey(json['role'] as String),
       displayName: json['display_name'] as String? ?? '',
       requiresPasswordReset: json['requires_password_reset'] as bool? ?? true,
+      isActive: json['is_active'] as bool? ?? true,
     );
   }
 
@@ -70,6 +73,7 @@ class UserProfile {
       'role': role.key,
       'display_name': displayName,
       'requires_password_reset': requiresPasswordReset,
+      'is_active': isActive,
     };
   }
 
@@ -79,6 +83,7 @@ class UserProfile {
     UserRole? role,
     String? displayName,
     bool? requiresPasswordReset,
+    bool? isActive,
   }) {
     return UserProfile(
       id: id ?? this.id,
@@ -86,6 +91,7 @@ class UserProfile {
       role: role ?? this.role,
       displayName: displayName ?? this.displayName,
       requiresPasswordReset: requiresPasswordReset ?? this.requiresPasswordReset,
+      isActive: isActive ?? this.isActive,
     );
   }
 }

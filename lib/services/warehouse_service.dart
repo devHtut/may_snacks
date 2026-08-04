@@ -230,6 +230,11 @@ class MockWarehouseService implements WarehouseService {
   static List<DisposalRequest> _disposals = [];
   static List<PhysicalAudit> _audits = [];
 
+  static List<Product> get productsList => _products;
+  static List<StockBatch> get batchesList => _batches;
+  static List<Order> get ordersList => _orders;
+  static List<DisposalRequest> get disposalsList => _disposals;
+
   static void resetDatabase() {
     _products = [
       Product(id: 'p1', name: 'Butter Bread', sku: 'MS-BUTTER-BREAD', price: 1500.0, createdAt: DateTime.now()),

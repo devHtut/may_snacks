@@ -14,6 +14,8 @@ import 'models/profile.dart';
 import 'services/auth_service.dart';
 import 'services/warehouse_service.dart';
 import 'features/warehouse/controllers/warehouse_controller.dart';
+import 'services/admin_service.dart';
+import 'features/admin/controllers/admin_controller.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -63,6 +65,19 @@ class MyApp extends StatelessWidget {
           create: (context) => WarehouseController(context.read<WarehouseService>()),
           update: (context, service, controller) =>
               controller ?? WarehouseController(service),
+        ),
+        // Provide the admin service
+        Provider<AdminService>(
+          create: (_) => SupabaseConfig.useMock
+              ? MockAdminService()
+              : SupabaseAdminService(Supabase.instance.client),
+        ),
+        // Provide the admin controller
+        ChangeNotifierProvider<AdminController>(
+          create: (context) => AdminController(
+            context.read<AdminService>(),
+            context.read<AuthService>(),
+          ),
         ),
       ],
       child: MaterialApp(

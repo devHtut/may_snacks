@@ -13,6 +13,7 @@ abstract class AuthService {
   Future<UserProfile?> getProfile(String userId);
   Future<String> createStaffUser(String email, String password, UserRole role, String displayName);
   Future<void> resetStaffPassword(String targetUserId, String newPassword);
+  Future<void> toggleUserStatus(String targetUserId, bool isActive);
   Future<List<UserProfile>> getAllProfiles();
   
   void dispose();
@@ -67,6 +68,13 @@ class SupabaseAuthService implements AuthService {
     );
     if (response.user == null) return null;
     final profile = await getProfile(response.user!.id);
+    
+    // Check if the user account is active
+    if (profile == null || !profile.isActive) {
+      await _client.auth.signOut();
+      throw Exception('This account has been deactivated. Please contact support.');
+    }
+    
     _updateProfile(profile);
     return profile;
   }
@@ -130,6 +138,14 @@ class SupabaseAuthService implements AuthService {
     await _client.rpc('reset_staff_password', params: {
       'target_user_id': targetUserId,
       'new_password': newPassword,
+    });
+  }
+
+  @override
+  Future<void> toggleUserStatus(String targetUserId, bool isActive) async {
+    await _client.rpc('toggle_user_status', params: {
+      'target_user_id': targetUserId,
+      'status': isActive,
     });
   }
 
@@ -209,6 +225,12 @@ class MockAuthService implements AuthService {
     }
 
     final profile = _mockProfiles[index];
+    
+    // Check if the user account is active
+    if (!profile.isActive) {
+      throw Exception('This account has been deactivated. Please contact support.');
+    }
+    
     _updateProfile(profile);
     return profile;
   }
@@ -276,6 +298,15 @@ class MockAuthService implements AuthService {
     final profile = _mockProfiles[index];
     _mockProfiles[index] = profile.copyWith(requiresPasswordReset: true);
     _mockPasswords[profile.email.toLowerCase()] = newPassword;
+  }
+
+  @override
+  Future<void> toggleUserStatus(String targetUserId, bool isActive) async {
+    await Future.delayed(const Duration(milliseconds: 300));
+    final index = _mockProfiles.indexWhere((p) => p.id == targetUserId);
+    if (index != -1) {
+      _mockProfiles[index] = _mockProfiles[index].copyWith(isActive: isActive);
+    }
   }
 
   @override
