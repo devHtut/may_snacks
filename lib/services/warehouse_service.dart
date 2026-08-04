@@ -36,6 +36,7 @@ abstract class WarehouseService {
     required String salesStaffId,
     required List<OrderItem> items,
   });
+  Future<void> cancelOrder(String orderId);
 }
 
 class SupabaseWarehouseService implements WarehouseService {
@@ -82,11 +83,10 @@ class SupabaseWarehouseService implements WarehouseService {
 
   @override
   Future<List<Order>> fetchIncomingOrders() async {
-    // Select orders with status = 'pending' and pre-fetch order items and products
+    // Select all orders and pre-fetch order items and products
     final response = await _client
         .from('orders')
         .select('*, order_items(*, products(*))')
-        .eq('status', 'pending')
         .order('created_at', ascending: true);
         
     return (response as List).map((json) => Order.fromJson(json)).toList();
@@ -261,6 +261,12 @@ class SupabaseWarehouseService implements WarehouseService {
         
     return Order.fromJson(response);
   }
+
+  @override
+  Future<void> cancelOrder(String orderId) async {
+    // Only allow deletion if the order is still pending
+    await _client.from('orders').delete().eq('id', orderId).eq('status', 'pending');
+  }
 }
 
 class MockWarehouseService implements WarehouseService {
@@ -392,7 +398,7 @@ class MockWarehouseService implements WarehouseService {
   @override
   Future<List<Order>> fetchIncomingOrders() async {
     await Future.delayed(const Duration(milliseconds: 400));
-    return _orders.where((o) => o.status == OrderStatus.pending).toList();
+    return List.from(_orders);
   }
 
   @override
@@ -555,5 +561,11 @@ class MockWarehouseService implements WarehouseService {
 
     _orders.add(newOrder);
     return newOrder;
+  }
+
+  @override
+  Future<void> cancelOrder(String orderId) async {
+    await Future.delayed(const Duration(milliseconds: 300));
+    _orders.removeWhere((o) => o.id == orderId && o.status == OrderStatus.pending);
   }
 }

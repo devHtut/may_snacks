@@ -55,7 +55,7 @@ class _OrderFulfillmentTabState extends State<OrderFulfillmentTab> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final controller = context.watch<WarehouseController>();
-    final pendingOrders = controller.orders;
+    final pendingOrders = controller.orders.where((o) => o.status == OrderStatus.pending).toList();
     final isLoading = controller.isLoading;
 
     if (pendingOrders.isEmpty) {

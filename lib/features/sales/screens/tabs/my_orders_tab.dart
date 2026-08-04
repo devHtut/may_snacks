@@ -57,6 +57,31 @@ class MyOrdersTab extends StatelessWidget {
             ),
           ),
           actions: [
+            if (order.status == OrderStatus.pending)
+              TextButton(
+                onPressed: () async {
+                  final warehouseController = context.read<WarehouseController>();
+                  final success = await warehouseController.cancelOrder(order.id);
+                  if (success && context.mounted) {
+                    Navigator.pop(context);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Order canceled successfully.'),
+                        backgroundColor: Colors.green,
+                      ),
+                    );
+                  } else if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(warehouseController.errorMessage ?? 'Failed to cancel order.'),
+                        backgroundColor: Colors.redAccent,
+                      ),
+                    );
+                  }
+                },
+                style: TextButton.styleFrom(foregroundColor: Colors.redAccent),
+                child: const Text('Cancel Order'),
+              ),
             TextButton(
               onPressed: () => Navigator.pop(context),
               child: const Text('Close'),
