@@ -12,6 +12,8 @@ import 'features/sales/screens/sales_dashboard.dart';
 import 'features/warehouse/screens/warehouse_dashboard.dart';
 import 'models/profile.dart';
 import 'services/auth_service.dart';
+import 'services/warehouse_service.dart';
+import 'features/warehouse/controllers/warehouse_controller.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -49,6 +51,18 @@ class MyApp extends StatelessWidget {
           create: (context) => AuthController(context.read<AuthService>()),
           update: (context, service, controller) =>
               controller ?? AuthController(service),
+        ),
+        // Provide the warehouse service
+        Provider<WarehouseService>(
+          create: (_) => SupabaseConfig.useMock
+              ? MockWarehouseService()
+              : SupabaseWarehouseService(Supabase.instance.client),
+        ),
+        // Provide the warehouse controller
+        ChangeNotifierProxyProvider<WarehouseService, WarehouseController>(
+          create: (context) => WarehouseController(context.read<WarehouseService>()),
+          update: (context, service, controller) =>
+              controller ?? WarehouseController(service),
         ),
       ],
       child: MaterialApp(
