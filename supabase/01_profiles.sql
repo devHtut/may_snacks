@@ -12,6 +12,18 @@ CREATE TABLE IF NOT EXISTS public.profiles (
 -- Enable RLS
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 
+-- Helper security definer function to check if the current user is an admin.
+-- Running as SECURITY DEFINER bypasses RLS on the profiles table, preventing infinite recursion.
+CREATE OR REPLACE FUNCTION public.is_admin()
+RETURNS BOOLEAN AS $$
+BEGIN
+  RETURN EXISTS (
+    SELECT 1 FROM public.profiles
+    WHERE id = auth.uid() AND role = 'admin'
+  );
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
 -- Create Row Level Security (RLS) Policies
 -- A. Read access: Any authenticated user can read profiles (needed for display names, role checks)
 CREATE POLICY "Allow read access for authenticated users" 
@@ -30,9 +42,4 @@ WITH CHECK (auth.uid() = id);
 CREATE POLICY "Allow admins full access on profiles" 
 ON public.profiles FOR ALL 
 TO authenticated 
-USING (
-  EXISTS (
-    SELECT 1 FROM public.profiles 
-    WHERE id = auth.uid() AND role = 'admin'
-  )
-);
+USING (public.is_admin());
