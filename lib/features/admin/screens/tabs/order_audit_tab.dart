@@ -21,8 +21,7 @@ class _OrderAuditTabState extends State<OrderAuditTab> {
     final theme = Theme.of(context);
     final warehouseController = context.watch<WarehouseController>();
     
-    // We fetch orders using the warehouse lists (since they contain all orders)
-    final allOrders = MockWarehouseService.ordersList; 
+    final allOrders = warehouseController.orders; 
 
     // Filter and Search logic
     final filteredOrders = allOrders.where((order) {
