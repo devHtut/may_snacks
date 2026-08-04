@@ -61,13 +61,18 @@ ON public.orders FOR DELETE
 TO authenticated
 USING (public.is_admin());
 
--- 2. Create Order Items Table
 CREATE TABLE IF NOT EXISTS public.order_items (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   order_id UUID REFERENCES public.orders(id) ON DELETE CASCADE NOT NULL,
   product_id UUID REFERENCES public.products(id) ON DELETE CASCADE NOT NULL,
-  quantity INTEGER NOT NULL CHECK (quantity > 0)
+  quantity INTEGER NOT NULL CHECK (quantity > 0),
+  product_name TEXT,
+  product_price NUMERIC
 );
+
+ALTER TABLE public.order_items 
+ADD COLUMN IF NOT EXISTS product_name TEXT,
+ADD COLUMN IF NOT EXISTS product_price NUMERIC;
 
 -- Enable RLS for Order Items
 ALTER TABLE public.order_items ENABLE ROW LEVEL SECURITY;
