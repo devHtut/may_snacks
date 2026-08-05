@@ -88,7 +88,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
                 _selectedIndex = index;
               });
             },
-            labelType: isWide ? NavigationRailLabelType.none : NavigationRailLabelType.all,
+            labelType: isWide
+                ? NavigationRailLabelType.none
+                : NavigationRailLabelType.all,
             destinations: const [
               NavigationRailDestination(
                 icon: Icon(Icons.people_alt_outlined),
@@ -150,7 +152,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                                 ),
                               ),
                               Text(
-                                'Status: Super Administrator',
+                                'Status: Administrator',
                                 style: TextStyle(
                                   fontSize: 12,
                                   fontWeight: FontWeight.bold,
@@ -161,9 +163,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                           ),
                           const SizedBox(height: 16),
                         ],
-                        Expanded(
-                          child: _tabs[_selectedIndex],
-                        ),
+                        Expanded(child: _tabs[_selectedIndex]),
                       ],
                     ),
                   ),

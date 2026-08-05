@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../models/profile.dart';
 import '../../../models/audit_log.dart';
-import '../../../models/product.dart';
 import '../../../services/admin_service.dart';
 import '../../../services/auth_service.dart';
 
@@ -21,11 +20,14 @@ class AdminController extends ChangeNotifier {
   bool _isLoading = false;
   String? _errorMessage;
 
+  String _selectedDurationFilter = 'month';
+
   AdminController(this._adminService, this._authService);
 
   List<UserProfile> get users => _users;
   List<AuditLog> get auditLogs => _auditLogs;
   Map<String, dynamic> get analytics => _analytics;
+  String get selectedDurationFilter => _selectedDurationFilter;
 
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
@@ -39,7 +41,7 @@ class AdminController extends ChangeNotifier {
       final results = await Future.wait([
         _authService.getAllProfiles(),
         _adminService.fetchAuditLogs(),
-        _adminService.fetchSalesAnalytics(),
+        _adminService.fetchSalesAnalytics(duration: _selectedDurationFilter),
       ]);
 
       _users = results[0] as List<UserProfile>;
@@ -49,6 +51,19 @@ class AdminController extends ChangeNotifier {
       _errorMessage = e.toString().replaceAll('Exception: ', '');
     } finally {
       _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> changeDurationFilter(String duration) async {
+    _selectedDurationFilter = duration;
+    notifyListeners();
+    try {
+      final updatedAnalytics = await _adminService.fetchSalesAnalytics(duration: duration);
+      _analytics = updatedAnalytics;
+    } catch (e) {
+      _errorMessage = e.toString().replaceAll('Exception: ', '');
+    } finally {
       notifyListeners();
     }
   }

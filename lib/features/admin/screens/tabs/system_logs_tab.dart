@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../../controllers/admin_controller.dart';
-import '../../../models/audit_log.dart';
+import 'package:may_snacks/models/audit_log.dart';
 
 class SystemLogsTab extends StatefulWidget {
   const SystemLogsTab({super.key});
