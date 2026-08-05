@@ -122,15 +122,33 @@ void main() {
     test('Bulk quantity entry sets large order quantities correctly', () async {
       await controller.loadAllWarehouseData();
 
-      // Direct bulk quantity set (e.g. typing 100)
-      controller.updateCartItem('p1', 100);
-      expect(controller.cart['p1'], equals(100));
+      // Direct bulk quantity set within available stock
+      const targetQty = 50;
+      controller.updateCartItem('p1', targetQty);
+      expect(controller.cart['p1'], equals(targetQty));
+      expect(controller.cartItemCount, equals(targetQty));
+    });
 
-      // Incremental bulk add (e.g. tapping +50 chip)
-      final currentQty = controller.cart['p1'] ?? 0;
-      controller.updateCartItem('p1', currentQty + 50);
-      expect(controller.cart['p1'], equals(150));
-      expect(controller.cartItemCount, equals(150));
+    test('Cart and Order Submission reject quantities exceeding available stock', () async {
+      await controller.loadAllWarehouseData();
+
+      final availableP1Stock = controller.getAvailableStock('p1');
+      expect(availableP1Stock, greaterThan(0));
+
+      // Attempt to add more than available stock
+      final success = controller.updateCartItem('p1', availableP1Stock + 50);
+      expect(success, isFalse);
+      expect(controller.errorMessage, contains('cannot exceed available stock'));
+      expect(controller.cart['p1'], equals(availableP1Stock)); // Capped at available stock
+
+      // Verify submitOrder fails if cart quantity exceeds available stock
+      controller.cart['p1'] = availableP1Stock + 10;
+      final submitSuccess = await controller.submitOrder(
+        customerName: 'Excess Stock Test Store',
+        salesStaffId: 's1',
+      );
+      expect(submitSuccess, isFalse);
+      expect(controller.errorMessage, contains('exceeds available stock'));
     });
   });
 }

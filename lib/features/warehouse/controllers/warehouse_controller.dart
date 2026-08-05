@@ -40,13 +40,37 @@ class WarehouseController extends ChangeNotifier {
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
 
-  void updateCartItem(String productId, int quantity) {
+  int getAvailableStock(String productId) {
+    return _batches
+        .where((b) => b.productId == productId && b.quantity > 0 && !b.isExpired)
+        .fold(0, (sum, b) => sum + b.quantity);
+  }
+
+  bool updateCartItem(String productId, int quantity) {
     if (quantity <= 0) {
       _cart.remove(productId);
-    } else {
-      _cart[productId] = quantity;
+      _errorMessage = null;
+      notifyListeners();
+      return true;
     }
+
+    final availableStock = getAvailableStock(productId);
+    if (quantity > availableStock) {
+      final product = _products.firstWhere((p) => p.id == productId, orElse: () => Product(id: productId, name: 'Product', sku: '', price: 0, createdAt: DateTime.now()));
+      _errorMessage = 'Quantity for "${product.name}" cannot exceed available stock ($availableStock units).';
+      if (availableStock > 0) {
+        _cart[productId] = availableStock;
+      } else {
+        _cart.remove(productId);
+      }
+      notifyListeners();
+      return false;
+    }
+
+    _cart[productId] = quantity;
+    _errorMessage = null;
     notifyListeners();
+    return true;
   }
 
   void clearCart() {
@@ -63,6 +87,17 @@ class WarehouseController extends ChangeNotifier {
       _errorMessage = 'Customer name and order items cannot be empty.';
       notifyListeners();
       return false;
+    }
+
+    // Final Stock Guard check before creating order
+    for (final entry in _cart.entries) {
+      final availableStock = getAvailableStock(entry.key);
+      if (entry.value > availableStock) {
+        final product = _products.firstWhere((p) => p.id == entry.key, orElse: () => Product(id: entry.key, name: 'Product', sku: '', price: 0, createdAt: DateTime.now()));
+        _errorMessage = 'Order quantity for "${product.name}" exceeds available stock ($availableStock units).';
+        notifyListeners();
+        return false;
+      }
     }
 
     _isLoading = true;

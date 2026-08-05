@@ -258,6 +258,9 @@ class _NewOrderTabState extends State<NewOrderTab> {
                       if (val == null || val < 0) {
                         return 'Please enter a valid positive number';
                       }
+                      if (val > totalStock) {
+                        return 'Quantity cannot exceed available stock ($totalStock units)';
+                      }
                     }
                     return null;
                   },
@@ -269,11 +272,22 @@ class _NewOrderTabState extends State<NewOrderTab> {
                   spacing: 8,
                   runSpacing: 8,
                   children: [10, 30, 50, 100, 200, 500].map((preset) {
+                    final isOverStock = preset > totalStock;
                     return ActionChip(
                       avatar: const Icon(Icons.add, size: 14),
                       label: Text('$preset'),
                       onPressed: () {
-                        qtyController.text = '$preset';
+                        if (isOverStock && totalStock > 0) {
+                          qtyController.text = '$totalStock';
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('Selected preset exceeds available stock. Capped to $totalStock units.'),
+                              duration: const Duration(seconds: 2),
+                            ),
+                          );
+                        } else {
+                          qtyController.text = '$preset';
+                        }
                       },
                     );
                   }).toList(),
@@ -294,7 +308,15 @@ class _NewOrderTabState extends State<NewOrderTab> {
               onPressed: () {
                 if (inputFormKey.currentState!.validate()) {
                   final newQty = int.tryParse(qtyController.text.trim()) ?? 0;
-                  context.read<WarehouseController>().updateCartItem(product.id, newQty);
+                  final success = context.read<WarehouseController>().updateCartItem(product.id, newQty);
+                  if (!success) {
+                    final errorMsg = context.read<WarehouseController>().errorMessage;
+                    if (errorMsg != null) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text(errorMsg), backgroundColor: Colors.redAccent),
+                      );
+                    }
+                  }
                   setState(() {});
                   Navigator.pop(context);
                 }
@@ -431,14 +453,23 @@ class _NewOrderTabState extends State<NewOrderTab> {
                                         ),
                                       ),
                                     ),
-                                    IconButton(
-                                      icon: Icon(Icons.add_circle_outline_rounded, color: theme.primaryColor),
-                                      onPressed: () {
-                                        warehouseController.updateCartItem(product.id, entry.value + 1);
-                                        setSheetState(() {});
-                                        setState(() {});
-                                      },
-                                    ),
+                                     IconButton(
+                                       icon: Icon(
+                                         Icons.add_circle_outline_rounded,
+                                         color: (totalStock > 0 && entry.value < totalStock) ? theme.primaryColor : Colors.grey,
+                                       ),
+                                       onPressed: () {
+                                         if (entry.value >= totalStock) {
+                                           ScaffoldMessenger.of(context).showSnackBar(
+                                             SnackBar(content: Text('Maximum available stock ($totalStock units) reached.'), duration: const Duration(seconds: 2)),
+                                           );
+                                           return;
+                                         }
+                                         warehouseController.updateCartItem(product.id, entry.value + 1);
+                                         setSheetState(() {});
+                                         setState(() {});
+                                       },
+                                     ),
                                   ],
                                 ),
                                 const SizedBox(width: 12),
@@ -744,16 +775,16 @@ class _NewOrderTabState extends State<NewOrderTab> {
                                           child: Container(
                                             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                                             decoration: BoxDecoration(
-                                              color: Colors.orange.withValues(alpha: 0.1),
+                                              color: canAdd ? Colors.orange.withValues(alpha: 0.1) : Colors.grey.withValues(alpha: 0.1),
                                               borderRadius: BorderRadius.circular(12),
-                                              border: Border.all(color: Colors.orange.withValues(alpha: 0.3)),
+                                              border: Border.all(color: canAdd ? Colors.orange.withValues(alpha: 0.3) : Colors.grey.shade300),
                                             ),
                                             child: Text(
                                               '+$addAmount',
                                               style: TextStyle(
                                                 fontSize: 10,
                                                 fontWeight: FontWeight.bold,
-                                                color: Colors.orange[900],
+                                                color: canAdd ? Colors.orange[900] : Colors.grey,
                                               ),
                                             ),
                                           ),
@@ -761,7 +792,6 @@ class _NewOrderTabState extends State<NewOrderTab> {
                                       }).toList(),
                                     ),
                                   ],
-                                ),
                               ],
                             ),
                           ),
