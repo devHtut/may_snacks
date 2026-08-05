@@ -41,8 +41,10 @@ enum CustomerStatus {
 class Customer {
   final String id;
   final String name;
+  final String region;
+  final String township;
   final String? address;
-  final String? phone;
+  final String phone;
   final CustomerStatus status;
   final String? createdBy;
   final DateTime createdAt;
@@ -50,8 +52,10 @@ class Customer {
   Customer({
     required this.id,
     required this.name,
+    required this.region,
+    required this.township,
     this.address,
-    this.phone,
+    required this.phone,
     required this.status,
     this.createdBy,
     required this.createdAt,
@@ -61,8 +65,10 @@ class Customer {
     return Customer(
       id: json['id'] as String,
       name: json['name'] as String,
+      region: json['region'] as String? ?? 'Yangon Region',
+      township: json['township'] as String? ?? 'Kamayut',
       address: json['address'] as String?,
-      phone: json['phone'] as String?,
+      phone: json['phone'] as String? ?? '0912345678',
       status: CustomerStatus.fromKey(json['status'] as String? ?? 'approved'),
       createdBy: json['created_by'] as String?,
       createdAt: DateTime.parse(json['created_at'] as String),
@@ -73,6 +79,8 @@ class Customer {
     return {
       'id': id,
       'name': name,
+      'region': region,
+      'township': township,
       'address': address,
       'phone': phone,
       'status': status.key,
@@ -84,6 +92,8 @@ class Customer {
   Customer copyWith({
     String? id,
     String? name,
+    String? region,
+    String? township,
     String? address,
     String? phone,
     CustomerStatus? status,
@@ -93,6 +103,8 @@ class Customer {
     return Customer(
       id: id ?? this.id,
       name: name ?? this.name,
+      region: region ?? this.region,
+      township: township ?? this.township,
       address: address ?? this.address,
       phone: phone ?? this.phone,
       status: status ?? this.status,

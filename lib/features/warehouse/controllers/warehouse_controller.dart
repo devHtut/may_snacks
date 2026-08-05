@@ -281,8 +281,10 @@ class WarehouseController extends ChangeNotifier {
 
   Future<bool> registerCustomer({
     required String name,
+    required String region,
+    required String township,
     String? address,
-    String? phone,
+    required String phone,
     required String createdBy,
   }) async {
     _isLoading = true;
@@ -292,6 +294,8 @@ class WarehouseController extends ChangeNotifier {
     try {
       await _service.registerCustomer(
         name: name,
+        region: region,
+        township: township,
         address: address,
         phone: phone,
         createdBy: createdBy,
@@ -342,8 +346,10 @@ class WarehouseController extends ChangeNotifier {
 
   Future<bool> addCustomerDirect({
     required String name,
+    required String region,
+    required String township,
     String? address,
-    String? phone,
+    required String phone,
   }) async {
     _isLoading = true;
     _errorMessage = null;
@@ -352,6 +358,8 @@ class WarehouseController extends ChangeNotifier {
     try {
       await _service.createCustomerDirect(
         name: name,
+        region: region,
+        township: township,
         address: address,
         phone: phone,
       );

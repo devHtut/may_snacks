@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import 'package:may_snacks/models/product.dart';
 import 'package:may_snacks/models/customer.dart';
+import 'package:may_snacks/services/location_service.dart';
 import 'package:may_snacks/features/auth/controllers/auth_controller.dart';
 import 'package:may_snacks/features/warehouse/controllers/warehouse_controller.dart';
 
@@ -17,12 +18,28 @@ class _NewOrderTabState extends State<NewOrderTab> {
   final _formKey = GlobalKey<FormState>();
   String _searchQuery = '';
   Customer? _selectedCustomer;
+  Map<String, List<String>> _locationData = {};
 
   // New shop registration form controllers
   final _newShopNameController = TextEditingController();
   final _newShopAddressController = TextEditingController();
   final _newShopPhoneController = TextEditingController();
   final _registerFormKey = GlobalKey<FormState>();
+
+  @override
+  void initState() {
+    super.initState();
+    _loadLocations();
+  }
+
+  Future<void> _loadLocations() async {
+    final data = await LocationService.loadLocationData();
+    if (mounted) {
+      setState(() {
+        _locationData = data;
+      });
+    }
+  }
 
   @override
   void dispose() {
@@ -33,89 +50,142 @@ class _NewOrderTabState extends State<NewOrderTab> {
   }
 
   void _showRegisterShopDialog() {
+    String? selectedRegion;
+    String? selectedTownship;
+
     showDialog(
       context: context,
       builder: (context) {
-        return AlertDialog(
-          title: const Text('Register New Field Shop'),
-          content: Form(
-            key: _registerFormKey,
-            child: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Text(
-                    'Submitting a new shop will send a request to Admin for approval to add to the official store dropdown list.',
-                    style: TextStyle(fontSize: 12, color: Colors.grey),
-                  ),
-                  const SizedBox(height: 16),
-                  TextFormField(
-                    controller: _newShopNameController,
-                    validator: (v) => v == null || v.trim().isEmpty ? 'Please enter store name' : null,
-                    decoration: const InputDecoration(
-                      labelText: 'Store Name *',
-                      hintText: 'e.g., Seiko Wholesale Mart',
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  TextFormField(
-                    controller: _newShopAddressController,
-                    decoration: const InputDecoration(
-                      labelText: 'Address (Optional)',
-                      hintText: 'e.g., Hledan, Kamayut Township',
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  TextFormField(
-                    controller: _newShopPhoneController,
-                    keyboardType: TextInputType.phone,
-                    decoration: const InputDecoration(
-                      labelText: 'Phone Number (Optional)',
-                      hintText: 'e.g., 09-987654321',
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel'),
-            ),
-            ElevatedButton(
-              onPressed: () async {
-                if (_registerFormKey.currentState!.validate()) {
-                  final warehouseController = context.read<WarehouseController>();
-                  final authController = context.read<AuthController>();
-                  final shopName = _newShopNameController.text.trim();
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            final regions = LocationService.getRegions(_locationData);
+            final townships = LocationService.getTownships(_locationData, selectedRegion);
 
-                  final success = await warehouseController.registerCustomer(
-                    name: shopName,
-                    address: _newShopAddressController.text.trim().isEmpty ? null : _newShopAddressController.text.trim(),
-                    phone: _newShopPhoneController.text.trim().isEmpty ? null : _newShopPhoneController.text.trim(),
-                    createdBy: authController.profile?.id ?? '',
-                  );
-
-                  if (success && mounted) {
-                    Navigator.pop(context);
-                    _newShopNameController.clear();
-                    _newShopAddressController.clear();
-                    _newShopPhoneController.clear();
-
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('Registration request for "$shopName" submitted! It will appear in the dropdown once Admin approves it.'),
-                        backgroundColor: Colors.green,
-                        duration: const Duration(seconds: 4),
+            return AlertDialog(
+              title: const Text('Register New Field Shop'),
+              content: Form(
+                key: _registerFormKey,
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Text(
+                        'Submitting a new shop will send a request to Admin for approval to add to the official store dropdown list.',
+                        style: TextStyle(fontSize: 12, color: Colors.grey),
                       ),
-                    );
-                  }
-                }
-              },
-              child: const Text('Submit Request'),
-            ),
-          ],
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: _newShopNameController,
+                        validator: (v) => v == null || v.trim().isEmpty ? 'Please enter store name' : null,
+                        decoration: const InputDecoration(
+                          labelText: 'Store Name *',
+                          hintText: 'e.g., Seiko Wholesale Mart',
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      DropdownButtonFormField<String>(
+                        value: selectedRegion,
+                        isExpanded: true,
+                        decoration: const InputDecoration(labelText: 'Region / State *'),
+                        validator: (v) => v == null ? 'Please select Region / State' : null,
+                        items: regions.map((r) {
+                          return DropdownMenuItem(value: r, child: Text(r));
+                        }).toList(),
+                        onChanged: (val) {
+                          setDialogState(() {
+                            selectedRegion = val;
+                            selectedTownship = null;
+                          });
+                        },
+                      ),
+                      const SizedBox(height: 12),
+                      DropdownButtonFormField<String>(
+                        value: selectedTownship,
+                        isExpanded: true,
+                        decoration: const InputDecoration(labelText: 'Township *'),
+                        validator: (v) => v == null ? 'Please select Township' : null,
+                        items: townships.map((t) {
+                          return DropdownMenuItem(value: t, child: Text(t));
+                        }).toList(),
+                        onChanged: (val) {
+                          setDialogState(() {
+                            selectedTownship = val;
+                          });
+                        },
+                      ),
+                      const SizedBox(height: 12),
+                      TextFormField(
+                        controller: _newShopPhoneController,
+                        keyboardType: TextInputType.phone,
+                        decoration: const InputDecoration(
+                          labelText: 'Phone Number *',
+                          hintText: 'e.g., 09123456789',
+                        ),
+                        validator: (v) {
+                          if (v == null || v.trim().isEmpty) {
+                            return 'Phone number is required';
+                          }
+                          final trimmed = v.trim();
+                          if (!RegExp(r'^09\d{7,9}$').hasMatch(trimmed)) {
+                            return 'Must start with 09, numbers only, & 9-11 digits long';
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 12),
+                      TextFormField(
+                        controller: _newShopAddressController,
+                        decoration: const InputDecoration(
+                          labelText: 'Street Address (Optional)',
+                          hintText: 'e.g., No. 45, Pyay Road',
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Cancel'),
+                ),
+                ElevatedButton(
+                  onPressed: () async {
+                    if (_registerFormKey.currentState!.validate()) {
+                      final warehouseController = context.read<WarehouseController>();
+                      final authController = context.read<AuthController>();
+                      final shopName = _newShopNameController.text.trim();
+
+                      final success = await warehouseController.registerCustomer(
+                        name: shopName,
+                        region: selectedRegion!,
+                        township: selectedTownship!,
+                        address: _newShopAddressController.text.trim().isEmpty ? null : _newShopAddressController.text.trim(),
+                        phone: _newShopPhoneController.text.trim(),
+                        createdBy: authController.profile?.id ?? '',
+                      );
+
+                      if (success && mounted) {
+                        Navigator.pop(context);
+                        _newShopNameController.clear();
+                        _newShopAddressController.clear();
+                        _newShopPhoneController.clear();
+
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('Registration request for "$shopName" submitted! It will appear in the dropdown once Admin approves it.'),
+                            backgroundColor: Colors.green,
+                            duration: const Duration(seconds: 4),
+                          ),
+                        );
+                      }
+                    }
+                  },
+                  child: const Text('Submit Request'),
+                ),
+              ],
+            );
+          },
         );
       },
     );
@@ -366,7 +436,7 @@ class _NewOrderTabState extends State<NewOrderTab> {
                         return DropdownMenuItem<Customer>(
                           value: customer,
                           child: Text(
-                            customer.name,
+                            '${customer.name} (${customer.township}, ${customer.region})',
                             overflow: TextOverflow.ellipsis,
                             style: const TextStyle(fontWeight: FontWeight.w600),
                           ),

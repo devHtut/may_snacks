@@ -43,16 +43,20 @@ abstract class WarehouseService {
   Future<List<Customer>> fetchCustomers();
   Future<Customer> registerCustomer({
     required String name,
+    required String region,
+    required String township,
     String? address,
-    String? phone,
+    required String phone,
     required String createdBy,
   });
   Future<void> approveCustomer(String customerId);
   Future<void> rejectCustomer(String customerId);
   Future<Customer> createCustomerDirect({
     required String name,
+    required String region,
+    required String township,
     String? address,
-    String? phone,
+    required String phone,
   });
 }
 
@@ -307,14 +311,18 @@ class SupabaseWarehouseService implements WarehouseService {
   @override
   Future<Customer> registerCustomer({
     required String name,
+    required String region,
+    required String township,
     String? address,
-    String? phone,
+    required String phone,
     required String createdBy,
   }) async {
     final response = await _client.from('customers').insert({
       'name': name.trim(),
+      'region': region.trim(),
+      'township': township.trim(),
       'address': address?.trim(),
-      'phone': phone?.trim(),
+      'phone': phone.trim(),
       'status': 'pending',
       'created_by': createdBy,
     }).select().single();
@@ -334,13 +342,17 @@ class SupabaseWarehouseService implements WarehouseService {
   @override
   Future<Customer> createCustomerDirect({
     required String name,
+    required String region,
+    required String township,
     String? address,
-    String? phone,
+    required String phone,
   }) async {
     final response = await _client.from('customers').insert({
       'name': name.trim(),
+      'region': region.trim(),
+      'township': township.trim(),
       'address': address?.trim(),
-      'phone': phone?.trim(),
+      'phone': phone.trim(),
       'status': 'approved',
     }).select().single();
     return Customer.fromJson(response);
@@ -364,10 +376,10 @@ class MockWarehouseService implements WarehouseService {
 
   static void resetDatabase() {
     _customers = [
-      Customer(id: 'c1', name: 'Junction City Supermarket', address: 'Pyay Road, Yangon', phone: '09-1234567', status: CustomerStatus.approved, createdAt: DateTime.now()),
-      Customer(id: 'c2', name: 'City Mart Myanmar', address: 'Myanmar Plaza, Yangon', phone: '09-9876543', status: CustomerStatus.approved, createdAt: DateTime.now()),
-      Customer(id: 'c3', name: 'Ocean Supercenter', address: 'Mayangone, Yangon', phone: '09-4445556', status: CustomerStatus.approved, createdAt: DateTime.now()),
-      Customer(id: 'c4', name: 'G&G Convenience Store', address: 'Downtown, Yangon', phone: '09-7778889', status: CustomerStatus.pending, createdBy: 's1', createdAt: DateTime.now()),
+      Customer(id: 'c1', name: 'Junction City Supermarket', region: 'Yangon Region', township: 'Pabedan', address: 'Pyay Road, Yangon', phone: '09123456789', status: CustomerStatus.approved, createdAt: DateTime.now()),
+      Customer(id: 'c2', name: 'City Mart Myanmar', region: 'Yangon Region', township: 'Bahan', address: 'Myanmar Plaza, Yangon', phone: '09987654321', status: CustomerStatus.approved, createdAt: DateTime.now()),
+      Customer(id: 'c3', name: 'Ocean Supercenter', region: 'Yangon Region', township: 'Mayangone', address: 'Mayangone, Yangon', phone: '09444555666', status: CustomerStatus.approved, createdAt: DateTime.now()),
+      Customer(id: 'c4', name: 'G&G Convenience Store', region: 'Yangon Region', township: 'Kyauktada', address: 'Downtown, Yangon', phone: '09777888999', status: CustomerStatus.pending, createdBy: 's1', createdAt: DateTime.now()),
     ];
 
     _products = [
@@ -676,14 +688,18 @@ class MockWarehouseService implements WarehouseService {
   @override
   Future<Customer> registerCustomer({
     required String name,
+    required String region,
+    required String township,
     String? address,
-    String? phone,
+    required String phone,
     required String createdBy,
   }) async {
     await Future.delayed(const Duration(milliseconds: 400));
     final newCustomer = Customer(
       id: 'c_${DateTime.now().millisecondsSinceEpoch}',
       name: name,
+      region: region,
+      township: township,
       address: address,
       phone: phone,
       status: CustomerStatus.pending,
@@ -715,13 +731,17 @@ class MockWarehouseService implements WarehouseService {
   @override
   Future<Customer> createCustomerDirect({
     required String name,
+    required String region,
+    required String township,
     String? address,
-    String? phone,
+    required String phone,
   }) async {
     await Future.delayed(const Duration(milliseconds: 400));
     final newCustomer = Customer(
       id: 'c_${DateTime.now().millisecondsSinceEpoch}',
       name: name,
+      region: region,
+      township: township,
       address: address,
       phone: phone,
       status: CustomerStatus.approved,

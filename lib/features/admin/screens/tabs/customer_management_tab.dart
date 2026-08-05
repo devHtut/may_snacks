@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import 'package:may_snacks/models/customer.dart';
+import 'package:may_snacks/services/location_service.dart';
 import 'package:may_snacks/features/warehouse/controllers/warehouse_controller.dart';
 
 class CustomerManagementTab extends StatefulWidget {
@@ -17,6 +18,22 @@ class _CustomerManagementTabState extends State<CustomerManagementTab> {
   final _addressController = TextEditingController();
   final _phoneController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
+  Map<String, List<String>> _locationData = {};
+
+  @override
+  void initState() {
+    super.initState();
+    _loadLocations();
+  }
+
+  Future<void> _loadLocations() async {
+    final data = await LocationService.loadLocationData();
+    if (mounted) {
+      setState(() {
+        _locationData = data;
+      });
+    }
+  }
 
   @override
   void dispose() {
@@ -27,75 +44,130 @@ class _CustomerManagementTabState extends State<CustomerManagementTab> {
   }
 
   void _showAddCustomerDialog() {
+    String? selectedRegion;
+    String? selectedTownship;
+
     showDialog(
       context: context,
       builder: (context) {
-        return AlertDialog(
-          title: const Text('Add Official Customer Store'),
-          content: Form(
-            key: _formKey,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextFormField(
-                  controller: _nameController,
-                  validator: (v) => v == null || v.trim().isEmpty ? 'Store name is required' : null,
-                  decoration: const InputDecoration(
-                    labelText: 'Store Name',
-                    hintText: 'e.g., City Mart Junction City',
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            final regions = LocationService.getRegions(_locationData);
+            final townships = LocationService.getTownships(_locationData, selectedRegion);
+
+            return AlertDialog(
+              title: const Text('Add Official Customer Store'),
+              content: Form(
+                key: _formKey,
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      TextFormField(
+                        controller: _nameController,
+                        validator: (v) => v == null || v.trim().isEmpty ? 'Store name is required' : null,
+                        decoration: const InputDecoration(
+                          labelText: 'Store Name *',
+                          hintText: 'e.g., City Mart Junction City',
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      DropdownButtonFormField<String>(
+                        value: selectedRegion,
+                        isExpanded: true,
+                        decoration: const InputDecoration(labelText: 'Region / State *'),
+                        validator: (v) => v == null ? 'Please select Region / State' : null,
+                        items: regions.map((r) {
+                          return DropdownMenuItem(value: r, child: Text(r));
+                        }).toList(),
+                        onChanged: (val) {
+                          setDialogState(() {
+                            selectedRegion = val;
+                            selectedTownship = null;
+                          });
+                        },
+                      ),
+                      const SizedBox(height: 12),
+                      DropdownButtonFormField<String>(
+                        value: selectedTownship,
+                        isExpanded: true,
+                        decoration: const InputDecoration(labelText: 'Township *'),
+                        validator: (v) => v == null ? 'Please select Township' : null,
+                        items: townships.map((t) {
+                          return DropdownMenuItem(value: t, child: Text(t));
+                        }).toList(),
+                        onChanged: (val) {
+                          setDialogState(() {
+                            selectedTownship = val;
+                          });
+                        },
+                      ),
+                      const SizedBox(height: 12),
+                      TextFormField(
+                        controller: _phoneController,
+                        keyboardType: TextInputType.phone,
+                        decoration: const InputDecoration(
+                          labelText: 'Phone Number *',
+                          hintText: 'e.g., 09123456789',
+                        ),
+                        validator: (v) {
+                          if (v == null || v.trim().isEmpty) {
+                            return 'Phone number is required';
+                          }
+                          final trimmed = v.trim();
+                          if (!RegExp(r'^09\d{7,9}$').hasMatch(trimmed)) {
+                            return 'Must start with 09, numbers only, & 9-11 digits long';
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 12),
+                      TextFormField(
+                        controller: _addressController,
+                        decoration: const InputDecoration(
+                          labelText: 'Street Address (Optional)',
+                          hintText: 'e.g., Pyay Road, Dagon Township',
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                const SizedBox(height: 12),
-                TextFormField(
-                  controller: _addressController,
-                  decoration: const InputDecoration(
-                    labelText: 'Address (Optional)',
-                    hintText: 'e.g., Pyay Road, Dagon Township',
-                  ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Cancel'),
                 ),
-                const SizedBox(height: 12),
-                TextFormField(
-                  controller: _phoneController,
-                  keyboardType: TextInputType.phone,
-                  decoration: const InputDecoration(
-                    labelText: 'Phone Number (Optional)',
-                    hintText: 'e.g., 09-1234567',
-                  ),
+                ElevatedButton(
+                  onPressed: () async {
+                    if (_formKey.currentState!.validate()) {
+                      final controller = context.read<WarehouseController>();
+                      final success = await controller.addCustomerDirect(
+                        name: _nameController.text.trim(),
+                        region: selectedRegion!,
+                        township: selectedTownship!,
+                        address: _addressController.text.trim().isEmpty ? null : _addressController.text.trim(),
+                        phone: _phoneController.text.trim(),
+                      );
+                      if (success && mounted) {
+                        Navigator.pop(context);
+                        _nameController.clear();
+                        _addressController.clear();
+                        _phoneController.clear();
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('New customer store added successfully!'),
+                            backgroundColor: Colors.green,
+                          ),
+                        );
+                      }
+                    }
+                  },
+                  child: const Text('Add Store'),
                 ),
               ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel'),
-            ),
-            ElevatedButton(
-              onPressed: () async {
-                if (_formKey.currentState!.validate()) {
-                  final controller = context.read<WarehouseController>();
-                  final success = await controller.addCustomerDirect(
-                    name: _nameController.text.trim(),
-                    address: _addressController.text.trim().isEmpty ? null : _addressController.text.trim(),
-                    phone: _phoneController.text.trim().isEmpty ? null : _phoneController.text.trim(),
-                  );
-                  if (success && mounted) {
-                    Navigator.pop(context);
-                    _nameController.clear();
-                    _addressController.clear();
-                    _phoneController.clear();
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('New customer store added successfully!'),
-                        backgroundColor: Colors.green,
-                      ),
-                    );
-                  }
-                }
-              },
-              child: const Text('Add Store'),
-            ),
-          ],
+            );
+          },
         );
       },
     );
@@ -111,8 +183,10 @@ class _CustomerManagementTabState extends State<CustomerManagementTab> {
     final filteredApproved = approvedCustomers.where((c) {
       final query = _searchQuery.toLowerCase();
       return c.name.toLowerCase().contains(query) ||
+          c.region.toLowerCase().contains(query) ||
+          c.township.toLowerCase().contains(query) ||
           (c.address?.toLowerCase().contains(query) ?? false) ||
-          (c.phone?.toLowerCase().contains(query) ?? false);
+          c.phone.toLowerCase().contains(query);
     }).toList();
 
     return SingleChildScrollView(
@@ -179,7 +253,7 @@ class _CustomerManagementTabState extends State<CustomerManagementTab> {
                           contentPadding: EdgeInsets.zero,
                           title: Text(customer.name, style: const TextStyle(fontWeight: FontWeight.bold)),
                           subtitle: Text(
-                            'Address: ${customer.address ?? 'N/A'} | Phone: ${customer.phone ?? 'N/A'}\nRequested on: ${DateFormat('yyyy-MM-dd HH:mm').format(customer.createdAt)}',
+                            'Location: ${customer.township}, ${customer.region}\nAddress: ${customer.address ?? 'N/A'} | Phone: ${customer.phone}\nRequested on: ${DateFormat('yyyy-MM-dd HH:mm').format(customer.createdAt)}',
                           ),
                           trailing: Row(
                             mainAxisSize: MainAxisSize.min,
@@ -236,7 +310,7 @@ class _CustomerManagementTabState extends State<CustomerManagementTab> {
           const SizedBox(height: 12),
           TextField(
             decoration: const InputDecoration(
-              hintText: 'Search stores by name, address, or phone...',
+              hintText: 'Search stores by name, region, township, address, or phone...',
               prefixIcon: Icon(Icons.search_rounded),
               isDense: true,
             ),
@@ -269,7 +343,9 @@ class _CustomerManagementTabState extends State<CustomerManagementTab> {
                           child: Icon(Icons.storefront_rounded, color: theme.primaryColor),
                         ),
                         title: Text(store.name, style: const TextStyle(fontWeight: FontWeight.bold)),
-                        subtitle: Text('Address: ${store.address ?? 'N/A'} | Phone: ${store.phone ?? 'N/A'}'),
+                        subtitle: Text(
+                          'Location: ${store.township}, ${store.region}\nAddress: ${store.address ?? 'N/A'} | Phone: ${store.phone}',
+                        ),
                         trailing: Container(
                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                           decoration: BoxDecoration(

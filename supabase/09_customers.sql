@@ -4,12 +4,18 @@
 CREATE TABLE IF NOT EXISTS public.customers (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name TEXT NOT NULL UNIQUE,
+  region TEXT NOT NULL,
+  township TEXT NOT NULL,
   address TEXT,
-  phone TEXT,
+  phone TEXT NOT NULL,
   status TEXT NOT NULL DEFAULT 'approved' CHECK (status IN ('pending', 'approved', 'rejected')),
   created_by UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
+
+ALTER TABLE public.customers
+ADD COLUMN IF NOT EXISTS region TEXT NOT NULL DEFAULT 'Yangon Region',
+ADD COLUMN IF NOT EXISTS township TEXT NOT NULL DEFAULT 'Kamayut';
 
 -- Enable RLS for Customers
 ALTER TABLE public.customers ENABLE ROW LEVEL SECURITY;
