@@ -442,36 +442,44 @@ class _NewOrderTabState extends State<NewOrderTab> {
                         ),
                       ],
                     ),
-                    const SizedBox(height: 8),
-                    DropdownButtonFormField<Customer>(
-                      value: _selectedCustomer,
-                      isExpanded: true,
-                      hint: const Text('Select Approved Master Customer Store...'),
-                      validator: (v) {
-                        if (v == null) {
-                          return 'Please select an approved customer store';
+                    Builder(
+                      builder: (context) {
+                        Customer? dropdownValue;
+                        if (_selectedCustomer != null && approvedCustomers.any((c) => c.id == _selectedCustomer!.id)) {
+                          dropdownValue = approvedCustomers.firstWhere((c) => c.id == _selectedCustomer!.id);
                         }
-                        return null;
-                      },
-                      items: approvedCustomers.map((customer) {
-                        return DropdownMenuItem<Customer>(
-                          value: customer,
-                          child: Text(
-                            '${customer.name} (${customer.township}, ${customer.region})',
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(fontWeight: FontWeight.w600),
+
+                        return DropdownButtonFormField<Customer>(
+                          value: dropdownValue,
+                          isExpanded: true,
+                          hint: const Text('Select Approved Master Customer Store...'),
+                          validator: (v) {
+                            if (v == null) {
+                              return 'Please select an approved customer store';
+                            }
+                            return null;
+                          },
+                          items: approvedCustomers.map((customer) {
+                            return DropdownMenuItem<Customer>(
+                              value: customer,
+                              child: Text(
+                                '${customer.name} (${customer.township}, ${customer.region})',
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(fontWeight: FontWeight.w600),
+                              ),
+                            );
+                          }).toList(),
+                          onChanged: (val) {
+                            setState(() {
+                              _selectedCustomer = val;
+                            });
+                          },
+                          decoration: const InputDecoration(
+                            isDense: true,
+                            prefixIcon: Icon(Icons.storefront_rounded),
                           ),
                         );
-                      }).toList(),
-                      onChanged: (val) {
-                        setState(() {
-                          _selectedCustomer = val;
-                        });
                       },
-                      decoration: const InputDecoration(
-                        isDense: true,
-                        prefixIcon: Icon(Icons.storefront_rounded),
-                      ),
                     ),
                   ],
                 ),
