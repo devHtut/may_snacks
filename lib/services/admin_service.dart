@@ -288,128 +288,236 @@ class MockAdminService implements AdminService {
     }
   }
 
+  static void _ensureSampleOrdersSeeded() {
+    if (MockWarehouseService.ordersList.length >= 10) return;
+
+    final now = DateTime.now();
+    final sampleOrders = [
+      Order(
+        id: 'o_seed_1',
+        customerName: 'City Mart (Pabedan)',
+        status: OrderStatus.delivered,
+        salesStaffId: 'sales-1',
+        createdAt: now.subtract(const Duration(hours: 2)),
+        items: [
+          OrderItem(id: 'item_1', orderId: 'o_seed_1', productId: 'p1', quantity: 20, productName: 'Butter Bread (Large)', productPrice: 1500.0),
+          OrderItem(id: 'item_2', orderId: 'o_seed_1', productId: 'p2', quantity: 15, productName: 'Crispy Rusks (Mini)', productPrice: 1200.0),
+        ],
+      ),
+      Order(
+        id: 'o_seed_2',
+        customerName: 'Super One Mart (Bahan)',
+        status: OrderStatus.packed,
+        salesStaffId: 'sales-2',
+        createdAt: now.subtract(const Duration(hours: 4)),
+        items: [
+          OrderItem(id: 'item_3', orderId: 'o_seed_2', productId: 'p3', quantity: 10, productName: 'Chocolate Cake Slice', productPrice: 2500.0),
+          OrderItem(id: 'item_4', orderId: 'o_seed_2', productId: 'p4', quantity: 25, productName: 'Banana Muffin (Pack)', productPrice: 1800.0),
+        ],
+      ),
+      Order(
+        id: 'o_seed_3',
+        customerName: 'Family Market (Kamayut)',
+        status: OrderStatus.delivered,
+        salesStaffId: 'sales-1',
+        createdAt: now.subtract(const Duration(days: 1)),
+        items: [
+          OrderItem(id: 'item_5', orderId: 'o_seed_3', productId: 'p1', quantity: 30, productName: 'Butter Bread (Large)', productPrice: 1500.0),
+          OrderItem(id: 'item_6', orderId: 'o_seed_3', productId: 'p5', quantity: 12, productName: 'Coconut Cookie Box', productPrice: 3000.0),
+        ],
+      ),
+      Order(
+        id: 'o_seed_4',
+        customerName: 'Capital Hypermarket (Thaketa)',
+        status: OrderStatus.delivered,
+        salesStaffId: 'sales-3',
+        createdAt: now.subtract(const Duration(days: 2)),
+        items: [
+          OrderItem(id: 'item_7', orderId: 'o_seed_4', productId: 'p2', quantity: 40, productName: 'Crispy Rusks (Mini)', productPrice: 1200.0),
+          OrderItem(id: 'item_8', orderId: 'o_seed_4', productId: 'p3', quantity: 15, productName: 'Chocolate Cake Slice', productPrice: 2500.0),
+        ],
+      ),
+      Order(
+        id: 'o_seed_5',
+        customerName: 'Ocean Supercenter (Hledan)',
+        status: OrderStatus.delivered,
+        salesStaffId: 'sales-2',
+        createdAt: now.subtract(const Duration(days: 3)),
+        items: [
+          OrderItem(id: 'item_9', orderId: 'o_seed_5', productId: 'p1', quantity: 50, productName: 'Butter Bread (Large)', productPrice: 1500.0),
+          OrderItem(id: 'item_10', orderId: 'o_seed_5', productId: 'p4', quantity: 20, productName: 'Banana Muffin (Pack)', productPrice: 1800.0),
+        ],
+      ),
+      Order(
+        id: 'o_seed_6',
+        customerName: 'Sein Gay Sar (Ahlone)',
+        status: OrderStatus.delivered,
+        salesStaffId: 'sales-4',
+        createdAt: now.subtract(const Duration(days: 5)),
+        items: [
+          OrderItem(id: 'item_11', orderId: 'o_seed_6', productId: 'p5', quantity: 18, productName: 'Coconut Cookie Box', productPrice: 3000.0),
+        ],
+      ),
+      Order(
+        id: 'o_seed_7',
+        customerName: 'Orange Supermarket (Yankin)',
+        status: OrderStatus.delivered,
+        salesStaffId: 'sales-1',
+        createdAt: now.subtract(const Duration(days: 12)),
+        items: [
+          OrderItem(id: 'item_12', orderId: 'o_seed_7', productId: 'p1', quantity: 40, productName: 'Butter Bread (Large)', productPrice: 1500.0),
+          OrderItem(id: 'item_13', orderId: 'o_seed_7', productId: 'p3', quantity: 20, productName: 'Chocolate Cake Slice', productPrice: 2500.0),
+        ],
+      ),
+      Order(
+        id: 'o_seed_8',
+        customerName: 'Ruby Mart (Kyauktada)',
+        status: OrderStatus.delivered,
+        salesStaffId: 'sales-3',
+        createdAt: now.subtract(const Duration(days: 20)),
+        items: [
+          OrderItem(id: 'item_14', orderId: 'o_seed_8', productId: 'p2', quantity: 50, productName: 'Crispy Rusks (Mini)', productPrice: 1200.0),
+        ],
+      ),
+    ];
+
+    MockWarehouseService.ordersList.addAll(sampleOrders);
+  }
+
   @override
   Future<Map<String, dynamic>> fetchSalesAnalytics({String duration = 'month'}) async {
-    await Future.delayed(const Duration(milliseconds: 300));
-    
+    await Future.delayed(const Duration(milliseconds: 250));
+    _ensureSampleOrdersSeeded();
+
+    final allOrders = MockWarehouseService.ordersList;
+    final now = DateTime.now();
+
+    final filteredOrders = allOrders.where((order) {
+      final diffDays = now.difference(order.createdAt).inDays;
+      if (duration == 'today') {
+        return order.createdAt.year == now.year &&
+            order.createdAt.month == now.month &&
+            order.createdAt.day == now.day;
+      } else if (duration == 'week') {
+        return diffDays <= 7;
+      } else if (duration == 'month') {
+        return diffDays <= 30;
+      }
+      return true; // 'all'
+    }).toList();
+
     final Map<String, double> salesByProduct = {};
     final Map<String, double> salesByStaff = {};
     final Map<String, int> staffOrderCounts = {};
-    List<Map<String, dynamic>> trendData = [];
     double totalRevenue = 0.0;
-    int ordersCount = 0;
 
-    if (duration == 'today') {
-      salesByProduct['Butter Bread (Large)'] = 28000.0;
-      salesByProduct['Crispy Rusks (Mini)'] = 15000.0;
-      salesByProduct['Chocolate Cake Slice'] = 12000.0;
-      salesByProduct['Banana Muffin (Pack)'] = 9000.0;
+    for (final order in filteredOrders) {
+      final staffName = _resolveStaffName(order.salesStaffId);
+      staffOrderCounts[staffName] = (staffOrderCounts[staffName] ?? 0) + 1;
 
-      salesByStaff['Daw Hla (Sales Staff)'] = 28000.0;
-      salesByStaff['Ko Min (Sales Staff)'] = 21000.0;
-      salesByStaff['U Tun Tun (Sales Staff)'] = 15000.0;
+      for (final item in order.items) {
+        final productName = item.productName ?? 'Unknown Snack';
+        final revenue = item.quantity * (item.productPrice ?? 0.0);
 
-      staffOrderCounts['Daw Hla (Sales Staff)'] = 3;
-      staffOrderCounts['Ko Min (Sales Staff)'] = 2;
-      staffOrderCounts['U Tun Tun (Sales Staff)'] = 1;
-
-      totalRevenue = 64000.0;
-      ordersCount = 6;
-      trendData = [
-        {'label': '8 AM', 'revenue': 8000.0},
-        {'label': '10 AM', 'revenue': 14000.0},
-        {'label': '12 PM', 'revenue': 22000.0},
-        {'label': '2 PM', 'revenue': 12000.0},
-        {'label': '4 PM', 'revenue': 8000.0},
-      ];
-    } else if (duration == 'week') {
-      salesByProduct['Butter Bread (Large)'] = 110000.0;
-      salesByProduct['Crispy Rusks (Mini)'] = 68000.0;
-      salesByProduct['Chocolate Cake Slice'] = 54000.0;
-      salesByProduct['Banana Muffin (Pack)'] = 42000.0;
-      salesByProduct['Coconut Cookie Box'] = 36000.0;
-
-      salesByStaff['Daw Hla (Sales Staff)'] = 125000.0;
-      salesByStaff['Ko Min (Sales Staff)'] = 98000.0;
-      salesByStaff['U Tun Tun (Sales Staff)'] = 52000.0;
-      salesByStaff['Ma Su (Sales Staff)'] = 35000.0;
-
-      staffOrderCounts['Daw Hla (Sales Staff)'] = 12;
-      staffOrderCounts['Ko Min (Sales Staff)'] = 9;
-      staffOrderCounts['U Tun Tun (Sales Staff)'] = 5;
-      staffOrderCounts['Ma Su (Sales Staff)'] = 4;
-
-      totalRevenue = 310000.0;
-      ordersCount = 30;
-      trendData = [
-        {'label': 'Mon', 'revenue': 35000.0},
-        {'label': 'Tue', 'revenue': 48000.0},
-        {'label': 'Wed', 'revenue': 52000.0},
-        {'label': 'Thu', 'revenue': 61000.0},
-        {'label': 'Fri', 'revenue': 58000.0},
-        {'label': 'Sat', 'revenue': 34000.0},
-        {'label': 'Sun', 'revenue': 22000.0},
-      ];
-    } else if (duration == 'all') {
-      salesByProduct['Butter Bread (Large)'] = 850000.0;
-      salesByProduct['Crispy Rusks (Mini)'] = 520000.0;
-      salesByProduct['Chocolate Cake Slice'] = 410000.0;
-      salesByProduct['Banana Muffin (Pack)'] = 320000.0;
-      salesByProduct['Coconut Cookie Box'] = 250000.0;
-
-      salesByStaff['Daw Hla (Sales Staff)'] = 920000.0;
-      salesByStaff['Ko Min (Sales Staff)'] = 740000.0;
-      salesByStaff['U Tun Tun (Sales Staff)'] = 450000.0;
-      salesByStaff['Ma Su (Sales Staff)'] = 240000.0;
-
-      staffOrderCounts['Daw Hla (Sales Staff)'] = 85;
-      staffOrderCounts['Ko Min (Sales Staff)'] = 64;
-      staffOrderCounts['U Tun Tun (Sales Staff)'] = 41;
-      staffOrderCounts['Ma Su (Sales Staff)'] = 22;
-
-      totalRevenue = 2350000.0;
-      ordersCount = 212;
-      trendData = [
-        {'label': 'Q1', 'revenue': 480000.0},
-        {'label': 'Q2', 'revenue': 560000.0},
-        {'label': 'Q3', 'revenue': 620000.0},
-        {'label': 'Q4', 'revenue': 690000.0},
-      ];
-    } else {
-      // Default: 'month'
-      salesByProduct['Butter Bread (Large)'] = 320000.0;
-      salesByProduct['Crispy Rusks (Mini)'] = 210000.0;
-      salesByProduct['Chocolate Cake Slice'] = 165000.0;
-      salesByProduct['Banana Muffin (Pack)'] = 140000.0;
-      salesByProduct['Coconut Cookie Box'] = 115000.0;
-
-      salesByStaff['Daw Hla (Sales Staff)'] = 380000.0;
-      salesByStaff['Ko Min (Sales Staff)'] = 290000.0;
-      salesByStaff['U Tun Tun (Sales Staff)'] = 185000.0;
-      salesByStaff['Ma Su (Sales Staff)'] = 95000.0;
-
-      staffOrderCounts['Daw Hla (Sales Staff)'] = 34;
-      staffOrderCounts['Ko Min (Sales Staff)'] = 26;
-      staffOrderCounts['U Tun Tun (Sales Staff)'] = 16;
-      staffOrderCounts['Ma Su (Sales Staff)'] = 9;
-
-      totalRevenue = 950000.0;
-      ordersCount = 85;
-      trendData = [
-        {'label': 'Week 1', 'revenue': 190000.0},
-        {'label': 'Week 2', 'revenue': 240000.0},
-        {'label': 'Week 3', 'revenue': 270000.0},
-        {'label': 'Week 4', 'revenue': 250000.0},
-      ];
+        salesByProduct[productName] = (salesByProduct[productName] ?? 0.0) + revenue;
+        salesByStaff[staffName] = (salesByStaff[staffName] ?? 0.0) + revenue;
+        totalRevenue += revenue;
+      }
     }
+
+    final List<Map<String, dynamic>> trendData = _buildDynamicTrendData(filteredOrders, duration, now);
+
+    final List<Map<String, dynamic>> categoryData = salesByProduct.entries.map((entry) {
+      final pct = totalRevenue == 0 ? 0.0 : (entry.value / totalRevenue) * 100;
+      return {
+        'name': entry.key,
+        'value': entry.value,
+        'percentage': pct,
+      };
+    }).toList();
 
     return {
       'totalRevenue': totalRevenue,
       'salesByProduct': salesByProduct,
       'salesByStaff': salesByStaff,
       'staffOrderCounts': staffOrderCounts,
-      'ordersCount': ordersCount,
+      'ordersCount': filteredOrders.length,
       'trendData': trendData,
+      'categoryData': categoryData,
     };
+  }
+
+  String _resolveStaffName(String? staffId) {
+    if (staffId == 'sales-1' || staffId == 's1') return 'Daw Hla (Sales Staff)';
+    if (staffId == 'sales-2' || staffId == 's2') return 'Ko Min (Sales Staff)';
+    if (staffId == 'sales-3' || staffId == 's3') return 'U Tun Tun (Sales Staff)';
+    if (staffId == 'sales-4' || staffId == 's4') return 'Ma Su (Sales Staff)';
+    return 'Field Staff (Sales)';
+  }
+
+  List<Map<String, dynamic>> _buildDynamicTrendData(List<Order> orders, String duration, DateTime now) {
+    if (duration == 'today') {
+      final buckets = <String, double>{
+        '8 AM': 0.0,
+        '10 AM': 0.0,
+        '12 PM': 0.0,
+        '2 PM': 0.0,
+        '4 PM': 0.0,
+        '6 PM': 0.0,
+      };
+      for (final order in orders) {
+        final hour = order.createdAt.hour;
+        if (hour < 9) {
+          buckets['8 AM'] = (buckets['8 AM'] ?? 0) + order.totalAmount;
+        } else if (hour < 11) {
+          buckets['10 AM'] = (buckets['10 AM'] ?? 0) + order.totalAmount;
+        } else if (hour < 13) {
+          buckets['12 PM'] = (buckets['12 PM'] ?? 0) + order.totalAmount;
+        } else if (hour < 15) {
+          buckets['2 PM'] = (buckets['2 PM'] ?? 0) + order.totalAmount;
+        } else if (hour < 17) {
+          buckets['4 PM'] = (buckets['4 PM'] ?? 0) + order.totalAmount;
+        } else {
+          buckets['6 PM'] = (buckets['6 PM'] ?? 0) + order.totalAmount;
+        }
+      }
+      return buckets.entries.map((e) => {'label': e.key, 'revenue': e.value}).toList();
+    } else if (duration == 'week') {
+      final days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+      final buckets = <String, double>{for (var d in days) d: 0.0};
+      for (final order in orders) {
+        final dayName = days[order.createdAt.weekday - 1];
+        buckets[dayName] = (buckets[dayName] ?? 0) + order.totalAmount;
+      }
+      return buckets.entries.map((e) => {'label': e.key, 'revenue': e.value}).toList();
+    } else if (duration == 'month') {
+      final buckets = <String, double>{
+        'Week 1': 0.0,
+        'Week 2': 0.0,
+        'Week 3': 0.0,
+        'Week 4': 0.0,
+      };
+      for (final order in orders) {
+        final day = order.createdAt.day;
+        if (day <= 7) {
+          buckets['Week 1'] = (buckets['Week 1'] ?? 0) + order.totalAmount;
+        } else if (day <= 14) {
+          buckets['Week 2'] = (buckets['Week 2'] ?? 0) + order.totalAmount;
+        } else if (day <= 21) {
+          buckets['Week 3'] = (buckets['Week 3'] ?? 0) + order.totalAmount;
+        } else {
+          buckets['Week 4'] = (buckets['Week 4'] ?? 0) + order.totalAmount;
+        }
+      }
+      return buckets.entries.map((e) => {'label': e.key, 'revenue': e.value}).toList();
+    } else {
+      final months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      final buckets = <String, double>{for (var m in months) m: 0.0};
+      for (final order in orders) {
+        final mName = months[order.createdAt.month - 1];
+        buckets[mName] = (buckets[mName] ?? 0) + order.totalAmount;
+      }
+      return buckets.entries.map((e) => {'label': e.key, 'revenue': e.value}).toList();
+    }
   }
 }

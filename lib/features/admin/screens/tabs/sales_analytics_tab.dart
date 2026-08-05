@@ -1,10 +1,29 @@
+import 'dart:math';
+import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../../controllers/admin_controller.dart';
 
-class SalesAnalyticsTab extends StatelessWidget {
+class SalesAnalyticsTab extends StatefulWidget {
   const SalesAnalyticsTab({super.key});
+
+  @override
+  State<SalesAnalyticsTab> createState() => _SalesAnalyticsTabState();
+}
+
+class _SalesAnalyticsTabState extends State<SalesAnalyticsTab> {
+  String _selectedChartType = 'line'; // 'line', 'bar', 'pie'
+
+  final List<Color> _chartColors = const [
+    Color(0xFF2563EB), // Royal Blue
+    Color(0xFF0D9488), // Teal
+    Color(0xFFD97706), // Amber
+    Color(0xFF7C3AED), // Purple
+    Color(0xFFE11D48), // Rose
+    Color(0xFF059669), // Emerald
+    Color(0xFFEA580C), // Orange
+  ];
 
   @override
   Widget build(BuildContext context) {
@@ -21,6 +40,7 @@ class SalesAnalyticsTab extends StatelessWidget {
     final Map<dynamic, dynamic> salesByStaff = analytics['salesByStaff'] as Map? ?? {};
     final Map<dynamic, dynamic> staffOrderCounts = analytics['staffOrderCounts'] as Map? ?? {};
     final List<dynamic> rawTrendData = analytics['trendData'] as List? ?? [];
+    final List<dynamic> categoryData = analytics['categoryData'] as List? ?? [];
 
     final sortedProducts = salesByProduct.entries.toList()
       ..sort((a, b) => (b.value as num).compareTo(a.value as num));
@@ -46,14 +66,14 @@ class SalesAnalyticsTab extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Sales Analytics & Revenue Overview',
+                    'Sales Analytics & Dynamic Insights',
                     style: theme.textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.bold,
                     ),
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    'Track revenue, staff performance, and sales trends across periods.',
+                    'Real-time revenue metrics calculated directly from active order records.',
                     style: theme.textTheme.bodySmall?.copyWith(color: Colors.grey[600]),
                   ),
                 ],
@@ -129,7 +149,7 @@ class SalesAnalyticsTab extends StatelessWidget {
           ),
           const SizedBox(height: 28),
 
-          // Sales Trend Bar Chart Card
+          // Main Interactive Chart Card (Line Chart, Bar Chart, Donut/Pie Chart Switcher)
           Card(
             elevation: 1,
             shape: RoundedRectangleBorder(
@@ -141,6 +161,7 @@ class SalesAnalyticsTab extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // Chart Control Header
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
@@ -152,23 +173,64 @@ class SalesAnalyticsTab extends StatelessWidget {
                               color: theme.primaryColor.withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(8),
                             ),
-                            child: Icon(Icons.bar_chart_rounded, color: theme.primaryColor, size: 20),
+                            child: Icon(
+                              _selectedChartType == 'line'
+                                  ? Icons.show_chart_rounded
+                                  : _selectedChartType == 'bar'
+                                      ? Icons.bar_chart_rounded
+                                      : Icons.pie_chart_outline_rounded,
+                              color: theme.primaryColor,
+                              size: 20,
+                            ),
                           ),
                           const SizedBox(width: 12),
-                          Text(
-                            'Revenue Trend Chart',
-                            style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                _selectedChartType == 'pie' ? 'Product Revenue Distribution' : 'Revenue Trend Chart',
+                                style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
+                              ),
+                              Text(
+                                _getFilterLabel(selectedDuration),
+                                style: TextStyle(fontSize: 11, color: Colors.grey[600]),
+                              ),
+                            ],
                           ),
                         ],
                       ),
-                      Text(
-                        _getFilterLabel(selectedDuration),
-                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.grey[600]),
+                      // Chart Type Selector
+                      Container(
+                        decoration: BoxDecoration(
+                          color: Colors.grey.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        padding: const EdgeInsets.all(3),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            _buildChartTypeButton('line', Icons.show_chart_rounded, 'Line Chart'),
+                            _buildChartTypeButton('bar', Icons.bar_chart_rounded, 'Bar Chart'),
+                            _buildChartTypeButton('pie', Icons.pie_chart_outline_rounded, 'Pie Chart'),
+                          ],
+                        ),
                       ),
                     ],
                   ),
                   const Divider(height: 32),
-                  _buildTrendBarChart(context, theme, rawTrendData, currencyFormatter),
+
+                  // Render Chart Body based on selection
+                  AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 300),
+                    child: KeyedSubtree(
+                      key: ValueKey('chart_$_selectedChartType'),
+                      child: _selectedChartType == 'line'
+                          ? _buildLineChart(theme, rawTrendData, currencyFormatter)
+                          : _selectedChartType == 'bar'
+                              ? _buildTrendBarChart(theme, rawTrendData, currencyFormatter)
+                              : _buildDonutPieChart(theme, categoryData, currencyFormatter),
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -205,6 +267,48 @@ class SalesAnalyticsTab extends StatelessWidget {
             },
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildChartTypeButton(String typeKey, IconData icon, String tooltip) {
+    final isSelected = _selectedChartType == typeKey;
+    final theme = Theme.of(context);
+
+    return Tooltip(
+      message: tooltip,
+      child: InkWell(
+        onTap: () {
+          setState(() {
+            _selectedChartType = typeKey;
+          });
+        },
+        borderRadius: BorderRadius.circular(8),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          decoration: BoxDecoration(
+            color: isSelected ? theme.primaryColor : Colors.transparent,
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Row(
+            children: [
+              Icon(
+                icon,
+                size: 16,
+                color: isSelected ? Colors.white : Colors.grey[700],
+              ),
+              const SizedBox(width: 6),
+              Text(
+                typeKey == 'line' ? 'Line' : typeKey == 'bar' ? 'Bar' : 'Pie',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                  color: isSelected ? Colors.white : Colors.grey[700],
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -292,15 +396,47 @@ class SalesAnalyticsTab extends StatelessWidget {
     );
   }
 
-  Widget _buildTrendBarChart(
-    BuildContext context,
+  Widget _buildLineChart(
     ThemeData theme,
     List<dynamic> trendData,
     NumberFormat currencyFormatter,
   ) {
     if (trendData.isEmpty) {
       return const SizedBox(
-        height: 180,
+        height: 220,
+        child: Center(child: Text('No trend data available for this duration.')),
+      );
+    }
+
+    final double maxRevenue = trendData.fold<double>(
+      0.0,
+      (max, item) {
+        final val = (item['revenue'] as num?)?.toDouble() ?? 0.0;
+        return val > max ? val : max;
+      },
+    );
+
+    return SizedBox(
+      height: 220,
+      child: CustomPaint(
+        size: Size.infinite,
+        painter: _LineChartPainter(
+          trendData: trendData,
+          maxRevenue: maxRevenue == 0 ? 1.0 : maxRevenue,
+          lineColor: theme.primaryColor,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTrendBarChart(
+    ThemeData theme,
+    List<dynamic> trendData,
+    NumberFormat currencyFormatter,
+  ) {
+    if (trendData.isEmpty) {
+      return const SizedBox(
+        height: 220,
         child: Center(child: Text('No trend data available for this duration.')),
       );
     }
@@ -316,7 +452,7 @@ class SalesAnalyticsTab extends StatelessWidget {
     final safeMax = maxRevenue == 0 ? 1.0 : maxRevenue;
 
     return SizedBox(
-      height: 200,
+      height: 220,
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         crossAxisAlignment: CrossAxisAlignment.end,
@@ -329,7 +465,6 @@ class SalesAnalyticsTab extends StatelessWidget {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
-                // Value tooltip text
                 Text(
                   _formatShortCurrency(revenue),
                   style: TextStyle(
@@ -339,21 +474,20 @@ class SalesAnalyticsTab extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 6),
-                // Animated Bar
                 Expanded(
                   child: Align(
                     alignment: Alignment.bottomCenter,
                     child: FractionallySizedBox(
                       heightFactor: ratio,
                       child: Container(
-                        width: 32,
+                        width: 34,
                         decoration: BoxDecoration(
                           gradient: LinearGradient(
                             begin: Alignment.topCenter,
                             end: Alignment.bottomCenter,
                             colors: [
                               theme.primaryColor,
-                              theme.primaryColor.withValues(alpha: 0.6),
+                              theme.primaryColor.withValues(alpha: 0.65),
                             ],
                           ),
                           borderRadius: const BorderRadius.vertical(top: Radius.circular(8)),
@@ -370,7 +504,6 @@ class SalesAnalyticsTab extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 10),
-                // X-Axis Label
                 Text(
                   label,
                   style: TextStyle(
@@ -383,6 +516,116 @@ class SalesAnalyticsTab extends StatelessWidget {
             ),
           );
         }).toList(),
+      ),
+    );
+  }
+
+  Widget _buildDonutPieChart(
+    ThemeData theme,
+    List<dynamic> categoryData,
+    NumberFormat currencyFormatter,
+  ) {
+    if (categoryData.isEmpty) {
+      return const SizedBox(
+        height: 220,
+        child: Center(child: Text('No category data available for this duration.')),
+      );
+    }
+
+    final double totalValue = categoryData.fold(
+      0.0,
+      (sum, item) => sum + ((item['value'] as num?)?.toDouble() ?? 0.0),
+    );
+
+    return SizedBox(
+      height: 220,
+      child: Row(
+        children: [
+          // Donut Chart Graphic
+          Expanded(
+            flex: 2,
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                CustomPaint(
+                  size: const Size(180, 180),
+                  painter: _DonutChartPainter(
+                    categoryData: categoryData,
+                    totalValue: totalValue == 0 ? 1.0 : totalValue,
+                    colors: _chartColors,
+                  ),
+                ),
+                Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text('Total Revenue', style: TextStyle(fontSize: 10, color: Colors.grey)),
+                    const SizedBox(height: 2),
+                    Text(
+                      _formatShortCurrency(totalValue),
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: theme.primaryColor,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 24),
+          // Interactive Legend List
+          Expanded(
+            flex: 3,
+            child: ListView.separated(
+              shrinkWrap: true,
+              itemCount: categoryData.length,
+              separatorBuilder: (context, index) => const SizedBox(height: 10),
+              itemBuilder: (context, index) {
+                final item = categoryData[index];
+                final name = (item['name'] as String?) ?? '';
+                final value = (item['value'] as num?)?.toDouble() ?? 0.0;
+                final percentage = (item['percentage'] as num?)?.toDouble() ?? 0.0;
+                final color = _chartColors[index % _chartColors.length];
+
+                return Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          width: 12,
+                          height: 12,
+                          decoration: BoxDecoration(
+                            color: color,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Text(
+                          name,
+                          style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12),
+                        ),
+                      ],
+                    ),
+                    Row(
+                      children: [
+                        Text(
+                          currencyFormatter.format(value),
+                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          '(${percentage.toStringAsFixed(1)}%)',
+                          style: TextStyle(fontSize: 11, color: Colors.grey[600]),
+                        ),
+                      ],
+                    ),
+                  ],
+                );
+              },
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -440,6 +683,7 @@ class SalesAnalyticsTab extends StatelessWidget {
                   final val = (entry.value as num).toDouble();
                   final ratio = val / (maxProductVal == 0 ? 1.0 : maxProductVal);
                   final pct = totalRevenue == 0 ? 0.0 : (val / totalRevenue) * 100;
+                  final itemColor = _chartColors[index % _chartColors.length];
 
                   return Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -452,10 +696,10 @@ class SalesAnalyticsTab extends StatelessWidget {
                               children: [
                                 CircleAvatar(
                                   radius: 12,
-                                  backgroundColor: theme.primaryColor.withValues(alpha: 0.1),
+                                  backgroundColor: itemColor.withValues(alpha: 0.15),
                                   child: Text(
                                     '#${index + 1}',
-                                    style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: theme.primaryColor),
+                                    style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: itemColor),
                                   ),
                                 ),
                                 const SizedBox(width: 8),
@@ -485,7 +729,7 @@ class SalesAnalyticsTab extends StatelessWidget {
                           value: ratio,
                           minHeight: 8,
                           backgroundColor: Colors.grey[200],
-                          valueColor: AlwaysStoppedAnimation<Color>(theme.primaryColor),
+                          valueColor: AlwaysStoppedAnimation<Color>(itemColor),
                         ),
                       ),
                     ],
@@ -624,11 +868,11 @@ class SalesAnalyticsTab extends StatelessWidget {
   String _getFilterLabel(String key) {
     switch (key) {
       case 'today':
-        return 'Today\'s Hourly Breakdown';
+        return 'Today\'s Hourly Dynamic Breakdown';
       case 'week':
         return 'Daily Revenue (This Week)';
       case 'all':
-        return 'Quarterly Revenue Breakdown';
+        return 'Monthly/Quarterly Dynamic Breakdown';
       case 'month':
       default:
         return 'Weekly Breakdown (This Month)';
@@ -652,5 +896,186 @@ class SalesAnalyticsTab extends StatelessWidget {
       return parts[0][0].toUpperCase();
     }
     return 'ST';
+  }
+}
+
+class _LineChartPainter extends CustomPainter {
+  final List<dynamic> trendData;
+  final double maxRevenue;
+  final Color lineColor;
+
+  _LineChartPainter({
+    required this.trendData,
+    required this.maxRevenue,
+    required this.lineColor,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (trendData.isEmpty) return;
+
+    final double paddingBottom = 30.0;
+    final double paddingTop = 25.0;
+    final double chartHeight = size.height - paddingBottom - paddingTop;
+    final double stepX = size.width / (trendData.length > 1 ? trendData.length - 1 : 1);
+
+    final List<Offset> points = [];
+
+    for (int i = 0; i < trendData.length; i++) {
+      final item = trendData[i];
+      final revenue = (item['revenue'] as num?)?.toDouble() ?? 0.0;
+      final x = i * stepX;
+      final y = size.height - paddingBottom - ((revenue / maxRevenue) * chartHeight);
+      points.add(Offset(x, y));
+    }
+
+    // Gradient fill under the curved line
+    final fillPath = Path();
+    fillPath.moveTo(points.first.dx, size.height - paddingBottom);
+    fillPath.lineTo(points.first.dx, points.first.dy);
+
+    for (int i = 0; i < points.length - 1; i++) {
+      final p1 = points[i];
+      final p2 = points[i + 1];
+      final controlPoint1 = Offset(p1.dx + (p2.dx - p1.dx) / 2, p1.dy);
+      final controlPoint2 = Offset(p1.dx + (p2.dx - p1.dx) / 2, p2.dy);
+      fillPath.cubicTo(controlPoint1.dx, controlPoint1.dy, controlPoint2.dx, controlPoint2.dy, p2.dx, p2.dy);
+    }
+
+    fillPath.lineTo(points.last.dx, size.height - paddingBottom);
+    fillPath.close();
+
+    final fillPaint = Paint()
+      ..shader = LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: [
+          lineColor.withValues(alpha: 0.35),
+          lineColor.withValues(alpha: 0.0),
+        ],
+      ).createShader(Rect.fromLTWH(0, 0, size.width, size.height));
+
+    canvas.drawPath(fillPath, fillPaint);
+
+    // Line Path
+    final linePath = Path();
+    linePath.moveTo(points.first.dx, points.first.dy);
+
+    for (int i = 0; i < points.length - 1; i++) {
+      final p1 = points[i];
+      final p2 = points[i + 1];
+      final controlPoint1 = Offset(p1.dx + (p2.dx - p1.dx) / 2, p1.dy);
+      final controlPoint2 = Offset(p1.dx + (p2.dx - p1.dx) / 2, p2.dy);
+      linePath.cubicTo(controlPoint1.dx, controlPoint1.dy, controlPoint2.dx, controlPoint2.dy, p2.dx, p2.dy);
+    }
+
+    final linePaint = Paint()
+      ..color = lineColor
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 3.5
+      ..strokeCap = StrokeCap.round;
+
+    canvas.drawPath(linePath, linePaint);
+
+    // Points and Text Labels
+    final dotPaint = Paint()..color = Colors.white;
+    final dotBorderPaint = Paint()
+      ..color = lineColor
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 3.0;
+
+    final textPainter = TextPainter(textDirection: ui.TextDirection.ltr);
+
+    for (int i = 0; i < points.length; i++) {
+      final pt = points[i];
+      final item = trendData[i];
+      final label = (item['label'] as String?) ?? '';
+      final revenue = (item['revenue'] as num?)?.toDouble() ?? 0.0;
+
+      // Draw glowing dot
+      canvas.drawCircle(pt, 5, dotPaint);
+      canvas.drawCircle(pt, 5, dotBorderPaint);
+
+      // Draw X-axis label
+      textPainter.text = TextSpan(
+        text: label,
+        style: const TextStyle(fontSize: 10, color: Colors.grey, fontWeight: FontWeight.bold),
+      );
+      textPainter.layout();
+      textPainter.paint(canvas, Offset(pt.dx - textPainter.width / 2, size.height - 20));
+
+      // Draw Value text above dot
+      if (revenue > 0) {
+        textPainter.text = TextSpan(
+          text: _formatShortCurrency(revenue),
+          style: TextStyle(fontSize: 10, color: lineColor, fontWeight: FontWeight.bold),
+        );
+        textPainter.layout();
+        textPainter.paint(canvas, Offset(pt.dx - textPainter.width / 2, pt.dy - 18));
+      }
+    }
+  }
+
+  String _formatShortCurrency(double value) {
+    if (value >= 1000000) {
+      return '${(value / 1000000).toStringAsFixed(1)}M';
+    } else if (value >= 1000) {
+      return '${(value / 1000).toStringAsFixed(0)}K';
+    }
+    return value.toStringAsFixed(0);
+  }
+
+  @override
+  bool shouldRepaint(covariant _LineChartPainter oldDelegate) {
+    return oldDelegate.trendData != trendData || oldDelegate.maxRevenue != maxRevenue;
+  }
+}
+
+class _DonutChartPainter extends CustomPainter {
+  final List<dynamic> categoryData;
+  final double totalValue;
+  final List<Color> colors;
+
+  _DonutChartPainter({
+    required this.categoryData,
+    required this.totalValue,
+    required this.colors,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+    final radius = min(size.width, size.height) / 2 - 10;
+    final strokeWidth = 28.0;
+
+    final paint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = strokeWidth
+      ..strokeCap = StrokeCap.butt;
+
+    double startAngle = -pi / 2;
+
+    for (int i = 0; i < categoryData.length; i++) {
+      final item = categoryData[i];
+      final val = (item['value'] as num?)?.toDouble() ?? 0.0;
+      final sweepAngle = (val / totalValue) * 2 * pi;
+
+      paint.color = colors[i % colors.length];
+
+      canvas.drawArc(
+        Rect.fromCircle(center: center, radius: radius),
+        startAngle,
+        sweepAngle - 0.04, // slight gap between slices
+        false,
+        paint,
+      );
+
+      startAngle += sweepAngle;
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _DonutChartPainter oldDelegate) {
+    return oldDelegate.categoryData != categoryData || oldDelegate.totalValue != totalValue;
   }
 }
