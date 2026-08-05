@@ -107,5 +107,38 @@ void main() {
       expect(newStore.phone, equals('09777666555'));
       expect(newStore.status, equals(CustomerStatus.approved));
     });
+
+    test('Admin permanently deletes store with 0 orders and deactivates/reactivates store with orders', () async {
+      await controller.loadAllWarehouseData();
+
+      // Create store with 0 orders
+      await controller.addCustomerDirect(
+        name: 'Zero Order Store',
+        region: 'Yangon Region',
+        township: 'Kamayut',
+        phone: '09111222333',
+      );
+      final zeroOrderStore = controller.customers.last;
+
+      // Verify 0 orders exist for this store
+      final orderCount = controller.orders.where((o) => o.customerId == zeroOrderStore.id || o.customerName == zeroOrderStore.name).length;
+      expect(orderCount, equals(0));
+
+      // Delete 0-order store permanently
+      final deleteSuccess = await controller.deleteCustomer(zeroOrderStore.id);
+      expect(deleteSuccess, isTrue);
+      expect(controller.customers.any((c) => c.id == zeroOrderStore.id), isFalse);
+
+      // Deactivate store with active orders
+      final existingStore = controller.approvedCustomers.first;
+      final deactivateSuccess = await controller.rejectCustomer(existingStore.id);
+      expect(deactivateSuccess, isTrue);
+      expect(controller.approvedCustomers.any((c) => c.id == existingStore.id), isFalse);
+
+      // Reactivate store
+      final reactivateSuccess = await controller.approveCustomer(existingStore.id);
+      expect(reactivateSuccess, isTrue);
+      expect(controller.approvedCustomers.any((c) => c.id == existingStore.id), isTrue);
+    });
   });
 }

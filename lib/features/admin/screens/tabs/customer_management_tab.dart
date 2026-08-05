@@ -46,8 +46,8 @@ class _CustomerManagementTabState extends State<CustomerManagementTab> {
 
   void _showAddCustomerDialog() {
     _nameController.clear();
-    _phoneController.clear();
     _addressController.clear();
+    _phoneController.clear();
 
     String? selectedRegion;
     String? selectedTownship;
@@ -70,10 +70,10 @@ class _CustomerManagementTabState extends State<CustomerManagementTab> {
                     children: [
                       TextFormField(
                         controller: _nameController,
-                        validator: (v) => v == null || v.trim().isEmpty ? 'Store name is required' : null,
+                        validator: (v) => v == null || v.trim().isEmpty ? 'Please enter store name' : null,
                         decoration: const InputDecoration(
                           labelText: 'Store Name *',
-                          hintText: 'e.g., City Mart Junction City',
+                          hintText: 'e.g., Junction City Supermarket',
                         ),
                       ),
                       const SizedBox(height: 12),
@@ -194,12 +194,100 @@ class _CustomerManagementTabState extends State<CustomerManagementTab> {
     );
   }
 
+  void _handleStoreRemoval(Customer store, WarehouseController controller) {
+    // Check if store has historical order records in the system
+    final hasOrders = controller.orders.any((o) =>
+        (o.customerId != null && o.customerId == store.id) ||
+        o.customerName.trim().toLowerCase() == store.name.trim().toLowerCase());
+
+    if (hasOrders) {
+      // Historical orders exist -> Offer Soft Delete / Deactivation
+      showDialog(
+        context: context,
+        builder: (context) {
+          return AlertDialog(
+            title: Row(
+              children: const [
+                Icon(Icons.shield_outlined, color: Colors.orange),
+                SizedBox(width: 8),
+                Expanded(child: Text('Historical Orders Protected', style: TextStyle(fontSize: 16))),
+              ],
+            ),
+            content: Text(
+              'Store "${store.name}" has active historical order records in the system and cannot be permanently deleted.\n\nWould you like to Deactivate (Reject) it so it no longer appears in the Sales Staff dropdown for new orders?',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Cancel'),
+              ),
+              ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(backgroundColor: Colors.orange[800]),
+                onPressed: () async {
+                  Navigator.pop(context);
+                  final success = await controller.rejectCustomer(store.id);
+                  if (success && mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Store "${store.name}" has been deactivated and hidden from sales dropdown.'),
+                        backgroundColor: Colors.orange[900],
+                      ),
+                    );
+                  }
+                },
+                icon: const Icon(Icons.block_rounded, size: 18),
+                label: const Text('Deactivate Store'),
+              ),
+            ],
+          );
+        },
+      );
+    } else {
+      // 0 Orders exist -> Offer Permanent Hard Delete
+      showDialog(
+        context: context,
+        builder: (context) {
+          return AlertDialog(
+            title: const Text('Delete Customer Store'),
+            content: Text(
+              'Are you sure you want to permanently delete store "${store.name}"? This store has 0 order history.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Cancel'),
+              ),
+              ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                onPressed: () async {
+                  Navigator.pop(context);
+                  final success = await controller.deleteCustomer(store.id);
+                  if (success && mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Store "${store.name}" deleted permanently.'),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                  }
+                },
+                icon: const Icon(Icons.delete_forever_rounded, size: 18),
+                label: const Text('Delete Permanently'),
+              ),
+            ],
+          );
+        },
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final controller = context.watch<WarehouseController>();
     final pendingCustomers = controller.pendingCustomers;
     final approvedCustomers = controller.approvedCustomers;
+    final deactivatedCustomers = controller.customers.where((c) => c.status == CustomerStatus.rejected).toList();
 
     final filteredApproved = approvedCustomers.where((c) {
       final query = _searchQuery.toLowerCase();
@@ -367,21 +455,85 @@ class _CustomerManagementTabState extends State<CustomerManagementTab> {
                         subtitle: Text(
                           'Location: ${store.township}, ${store.region}\nAddress: ${store.address ?? 'N/A'} | Phone: ${store.phone}',
                         ),
-                        trailing: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: Colors.green.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: const Text(
-                            'Active Master Store',
-                            style: TextStyle(fontSize: 11, color: Colors.green, fontWeight: FontWeight.bold),
-                          ),
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: Colors.green.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: const Text(
+                                'Active',
+                                style: TextStyle(fontSize: 11, color: Colors.green, fontWeight: FontWeight.bold),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            IconButton(
+                              icon: const Icon(Icons.delete_outline_rounded, color: Colors.redAccent),
+                              tooltip: 'Remove / Deactivate Store',
+                              onPressed: () => _handleStoreRemoval(store, controller),
+                            ),
+                          ],
                         ),
                       ),
                     );
                   },
                 ),
+          const SizedBox(height: 32),
+
+          // Deactivated / Rejected Stores Section
+          if (deactivatedCustomers.isNotEmpty) ...[
+            Text(
+              'Deactivated / Rejected Stores (${deactivatedCustomers.length})',
+              style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold, color: Colors.grey[700]),
+            ),
+            const SizedBox(height: 12),
+            ListView.separated(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: deactivatedCustomers.length,
+              separatorBuilder: (context, index) => const SizedBox(height: 8),
+              itemBuilder: (context, index) {
+                final store = deactivatedCustomers[index];
+                return Card(
+                  color: Colors.grey.shade50,
+                  margin: EdgeInsets.zero,
+                  child: ListTile(
+                    leading: CircleAvatar(
+                      backgroundColor: Colors.grey.shade200,
+                      child: const Icon(Icons.storefront_outlined, color: Colors.grey),
+                    ),
+                    title: Text(store.name, style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.grey)),
+                    subtitle: Text(
+                      'Location: ${store.township}, ${store.region}\nAddress: ${store.address ?? 'N/A'} | Phone: ${store.phone}',
+                      style: const TextStyle(color: Colors.grey),
+                    ),
+                    trailing: ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.blueAccent,
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      ),
+                      onPressed: () async {
+                        final success = await controller.approveCustomer(store.id);
+                        if (success && mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('Store "${store.name}" reactivated and restored to master dropdown!'),
+                              backgroundColor: Colors.green,
+                            ),
+                          );
+                        }
+                      },
+                      icon: const Icon(Icons.refresh_rounded, size: 16),
+                      label: const Text('Reactivate', style: TextStyle(fontSize: 12)),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ],
         ],
       ),
     );

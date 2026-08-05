@@ -58,6 +58,7 @@ abstract class WarehouseService {
     String? address,
     required String phone,
   });
+  Future<void> deleteCustomer(String customerId);
 }
 
 class SupabaseWarehouseService implements WarehouseService {
@@ -356,6 +357,11 @@ class SupabaseWarehouseService implements WarehouseService {
       'status': 'approved',
     }).select().single();
     return Customer.fromJson(response);
+  }
+
+  @override
+  Future<void> deleteCustomer(String customerId) async {
+    await _client.from('customers').delete().eq('id', customerId);
   }
 }
 
@@ -749,5 +755,11 @@ class MockWarehouseService implements WarehouseService {
     );
     _customers.add(newCustomer);
     return newCustomer;
+  }
+
+  @override
+  Future<void> deleteCustomer(String customerId) async {
+    await Future.delayed(const Duration(milliseconds: 200));
+    _customers.removeWhere((c) => c.id == customerId);
   }
 }
