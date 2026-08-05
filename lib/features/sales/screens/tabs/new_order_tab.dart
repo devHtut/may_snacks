@@ -212,10 +212,106 @@ class _NewOrderTabState extends State<NewOrderTab> {
     );
   }
 
+  void _showQuantityInputDialog(Product product, int currentQty, int totalStock) {
+    final qtyController = TextEditingController(text: currentQty > 0 ? '$currentQty' : '');
+    final inputFormKey = GlobalKey<FormState>();
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text('Set Quantity - ${product.name}'),
+          content: Form(
+            key: inputFormKey,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const Icon(Icons.inventory_2_outlined, size: 18, color: Colors.grey),
+                    const SizedBox(width: 6),
+                    Text(
+                      totalStock > 0 ? 'Available Stock: $totalStock units' : 'Item is Out of Stock',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: totalStock > 0 ? Colors.grey[700] : Colors.red,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                TextFormField(
+                  controller: qtyController,
+                  autofocus: true,
+                  keyboardType: TextInputType.number,
+                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                  decoration: const InputDecoration(
+                    labelText: 'Enter Units Quantity *',
+                    hintText: 'e.g. 100',
+                    suffixText: 'pcs',
+                    prefixIcon: Icon(Icons.edit_note_rounded),
+                  ),
+                  validator: (v) {
+                    if (v != null && v.trim().isNotEmpty) {
+                      final val = int.tryParse(v.trim());
+                      if (val == null || val < 0) {
+                        return 'Please enter a valid positive number';
+                      }
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 16),
+                const Text('Quick Bulk Selection:', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [10, 30, 50, 100, 200, 500].map((preset) {
+                    return ActionChip(
+                      avatar: const Icon(Icons.add, size: 14),
+                      label: Text('$preset'),
+                      onPressed: () {
+                        qtyController.text = '$preset';
+                      },
+                    );
+                  }).toList(),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                context.read<WarehouseController>().updateCartItem(product.id, 0);
+                setState(() {});
+                Navigator.pop(context);
+              },
+              child: const Text('Remove from Cart', style: TextStyle(color: Colors.red)),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                if (inputFormKey.currentState!.validate()) {
+                  final newQty = int.tryParse(qtyController.text.trim()) ?? 0;
+                  context.read<WarehouseController>().updateCartItem(product.id, newQty);
+                  setState(() {});
+                  Navigator.pop(context);
+                }
+              },
+              child: const Text('Save Quantity'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   void _showCartSheet() {
     final warehouseController = context.read<WarehouseController>();
     final authController = context.read<AuthController>();
     final products = warehouseController.products;
+    final batches = warehouseController.batches;
     final cart = warehouseController.cart;
 
     if (cart.isEmpty) {
@@ -291,6 +387,9 @@ class _NewOrderTabState extends State<NewOrderTab> {
                         itemBuilder: (context, index) {
                           final entry = cartItems[index];
                           final product = products.firstWhere((p) => p.id == entry.key);
+                          final totalStock = batches
+                              .where((b) => b.productId == product.id && b.quantity > 0 && !b.isExpired)
+                              .fold(0, (sum, b) => sum + b.quantity);
 
                           return Padding(
                             padding: const EdgeInsets.symmetric(vertical: 8),
@@ -315,9 +414,22 @@ class _NewOrderTabState extends State<NewOrderTab> {
                                         setState(() {});
                                       },
                                     ),
-                                    Text(
-                                      '${entry.value}',
-                                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                                    InkWell(
+                                      onTap: () {
+                                        _showQuantityInputDialog(product, entry.value, totalStock);
+                                        setSheetState(() {});
+                                      },
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                        decoration: BoxDecoration(
+                                          color: theme.primaryColor.withValues(alpha: 0.1),
+                                          borderRadius: BorderRadius.circular(6),
+                                        ),
+                                        child: Text(
+                                          '${entry.value} pcs',
+                                          style: TextStyle(fontWeight: FontWeight.bold, color: theme.primaryColor),
+                                        ),
+                                      ),
                                     ),
                                     IconButton(
                                       icon: Icon(Icons.add_circle_outline_rounded, color: theme.primaryColor),
@@ -410,6 +522,7 @@ class _NewOrderTabState extends State<NewOrderTab> {
     final theme = Theme.of(context);
     final warehouseController = context.watch<WarehouseController>();
     final products = warehouseController.products;
+    final batches = warehouseController.batches;
     final approvedCustomers = warehouseController.approvedCustomers;
     final cart = warehouseController.cart;
 
@@ -442,6 +555,7 @@ class _NewOrderTabState extends State<NewOrderTab> {
                         ),
                       ],
                     ),
+                    const SizedBox(height: 8),
                     Builder(
                       builder: (context) {
                         Customer? dropdownValue;
@@ -510,6 +624,9 @@ class _NewOrderTabState extends State<NewOrderTab> {
                       itemBuilder: (context, index) {
                         final product = filteredProducts[index];
                         final qty = cart[product.id] ?? 0;
+                        final totalStock = batches
+                            .where((b) => b.productId == product.id && b.quantity > 0 && !b.isExpired)
+                            .fold(0, (sum, b) => sum + b.quantity);
 
                         return Card(
                           margin: EdgeInsets.zero,
@@ -518,7 +635,7 @@ class _NewOrderTabState extends State<NewOrderTab> {
                             child: Row(
                               children: [
                                 CircleAvatar(
-                                  backgroundColor: theme.primaryColor.withOpacity(0.1),
+                                  backgroundColor: theme.primaryColor.withValues(alpha: 0.1),
                                   child: Icon(Icons.cookie_outlined, color: theme.primaryColor),
                                 ),
                                 const SizedBox(width: 16),
@@ -528,36 +645,120 @@ class _NewOrderTabState extends State<NewOrderTab> {
                                     children: [
                                       Text(product.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
                                       Text('SKU: ${product.sku}', style: const TextStyle(fontSize: 12, color: Colors.grey)),
-                                      const SizedBox(height: 4),
-                                      Text(
-                                        'Ks ${NumberFormat('#,###').format(product.price)}',
-                                        style: TextStyle(fontWeight: FontWeight.bold, color: theme.primaryColor),
+                                      const SizedBox(height: 6),
+                                      Wrap(
+                                        crossAxisAlignment: WrapCrossAlignment.center,
+                                        spacing: 8,
+                                        children: [
+                                          Text(
+                                            'Ks ${NumberFormat('#,###').format(product.price)}',
+                                            style: TextStyle(fontWeight: FontWeight.bold, color: theme.primaryColor),
+                                          ),
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                            decoration: BoxDecoration(
+                                              color: totalStock > 0 ? Colors.green.withValues(alpha: 0.1) : Colors.red.withValues(alpha: 0.1),
+                                              borderRadius: BorderRadius.circular(4),
+                                              border: Border.all(
+                                                color: totalStock > 0 ? Colors.green.withValues(alpha: 0.3) : Colors.red.withValues(alpha: 0.3),
+                                              ),
+                                            ),
+                                            child: Text(
+                                              totalStock > 0 ? 'Stock: $totalStock' : 'Out of Stock',
+                                              style: TextStyle(
+                                                fontSize: 11,
+                                                fontWeight: FontWeight.bold,
+                                                color: totalStock > 0 ? Colors.green[800] : Colors.red[800],
+                                              ),
+                                            ),
+                                          ),
+                                        ],
                                       ),
                                     ],
                                   ),
                                 ),
-                                // +/- Counter
-                                Row(
+                                // Quantity Controls (Direct Input + Quick Add Chips)
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.end,
                                   children: [
-                                    if (qty > 0) ...[
-                                      IconButton(
-                                        icon: const Icon(Icons.remove_circle_outline_rounded, color: Colors.grey),
-                                        onPressed: () {
-                                          warehouseController.updateCartItem(product.id, qty - 1);
-                                          setState(() {});
-                                        },
-                                      ),
-                                      Text(
-                                        '$qty',
-                                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                                      ),
-                                    ],
-                                    IconButton(
-                                      icon: Icon(Icons.add_circle_outline_rounded, color: theme.primaryColor),
-                                      onPressed: () {
-                                        warehouseController.updateCartItem(product.id, qty + 1);
-                                        setState(() {});
-                                      },
+                                    Row(
+                                      children: [
+                                        if (qty > 0) ...[
+                                          IconButton(
+                                            icon: const Icon(Icons.remove_circle_outline_rounded, color: Colors.grey),
+                                            onPressed: () {
+                                              warehouseController.updateCartItem(product.id, qty - 1);
+                                              setState(() {});
+                                            },
+                                          ),
+                                        ],
+                                        InkWell(
+                                          onTap: () => _showQuantityInputDialog(product, qty, totalStock),
+                                          borderRadius: BorderRadius.circular(8),
+                                          child: Container(
+                                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                            decoration: BoxDecoration(
+                                              color: qty > 0 ? theme.primaryColor.withValues(alpha: 0.1) : Colors.grey.withValues(alpha: 0.1),
+                                              borderRadius: BorderRadius.circular(8),
+                                              border: Border.all(
+                                                color: qty > 0 ? theme.primaryColor : Colors.grey.shade300,
+                                              ),
+                                            ),
+                                            child: Row(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                Text(
+                                                  qty > 0 ? '$qty pcs' : '+ Add',
+                                                  style: TextStyle(
+                                                    fontWeight: FontWeight.bold,
+                                                    fontSize: 14,
+                                                    color: qty > 0 ? theme.primaryColor : Colors.grey[700],
+                                                  ),
+                                                ),
+                                                const SizedBox(width: 4),
+                                                Icon(Icons.edit_rounded, size: 14, color: qty > 0 ? theme.primaryColor : Colors.grey[600]),
+                                              ],
+                                            ),
+                                          ),
+                                        ),
+                                        IconButton(
+                                          icon: Icon(Icons.add_circle_outline_rounded, color: theme.primaryColor),
+                                          onPressed: () {
+                                            warehouseController.updateCartItem(product.id, qty + 1);
+                                            setState(() {});
+                                          },
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 4),
+                                    // Quick Bulk Add Chips (+10, +50, +100)
+                                    Wrap(
+                                      spacing: 4,
+                                      children: [10, 50, 100].map((addAmount) {
+                                        return InkWell(
+                                          onTap: () {
+                                            warehouseController.updateCartItem(product.id, qty + addAmount);
+                                            setState(() {});
+                                          },
+                                          borderRadius: BorderRadius.circular(12),
+                                          child: Container(
+                                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                            decoration: BoxDecoration(
+                                              color: Colors.orange.withValues(alpha: 0.1),
+                                              borderRadius: BorderRadius.circular(12),
+                                              border: Border.all(color: Colors.orange.withValues(alpha: 0.3)),
+                                            ),
+                                            child: Text(
+                                              '+$addAmount',
+                                              style: TextStyle(
+                                                fontSize: 10,
+                                                fontWeight: FontWeight.bold,
+                                                color: Colors.orange[900],
+                                              ),
+                                            ),
+                                          ),
+                                        );
+                                      }).toList(),
                                     ),
                                   ],
                                 ),

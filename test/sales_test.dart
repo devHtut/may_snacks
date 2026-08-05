@@ -118,5 +118,19 @@ void main() {
       expect(updateSuccess, isTrue);
       expect(controller.orders.firstWhere((o) => o.id == order.id).status, equals(OrderStatus.delivered));
     });
+
+    test('Bulk quantity entry sets large order quantities correctly', () async {
+      await controller.loadAllWarehouseData();
+
+      // Direct bulk quantity set (e.g. typing 100)
+      controller.updateCartItem('p1', 100);
+      expect(controller.cart['p1'], equals(100));
+
+      // Incremental bulk add (e.g. tapping +50 chip)
+      final currentQty = controller.cart['p1'] ?? 0;
+      controller.updateCartItem('p1', currentQty + 50);
+      expect(controller.cart['p1'], equals(150));
+      expect(controller.cartItemCount, equals(150));
+    });
   });
 }
