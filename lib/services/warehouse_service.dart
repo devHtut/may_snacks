@@ -4,6 +4,7 @@ import '../models/batch.dart';
 import '../models/order.dart';
 import '../models/disposal.dart';
 import '../models/physical_audit.dart';
+import '../models/customer.dart';
 
 abstract class WarehouseService {
   Future<List<Product>> fetchProducts();
@@ -33,11 +34,26 @@ abstract class WarehouseService {
   });
   Future<Order> createOrder({
     required String customerName,
+    String? customerId,
     required String salesStaffId,
     required List<OrderItem> items,
   });
   Future<void> cancelOrder(String orderId);
   Future<void> updateOrderStatus(String orderId, OrderStatus status);
+  Future<List<Customer>> fetchCustomers();
+  Future<Customer> registerCustomer({
+    required String name,
+    String? address,
+    String? phone,
+    required String createdBy,
+  });
+  Future<void> approveCustomer(String customerId);
+  Future<void> rejectCustomer(String customerId);
+  Future<Customer> createCustomerDirect({
+    required String name,
+    String? address,
+    String? phone,
+  });
 }
 
 class SupabaseWarehouseService implements WarehouseService {
@@ -230,12 +246,14 @@ class SupabaseWarehouseService implements WarehouseService {
   @override
   Future<Order> createOrder({
     required String customerName,
+    String? customerId,
     required String salesStaffId,
     required List<OrderItem> items,
   }) async {
     // Insert order header
     final orderResponse = await _client.from('orders').insert({
       'customer_name': customerName,
+      'customer_id': customerId,
       'status': 'pending',
       'sales_staff_id': salesStaffId,
     }).select().single();
@@ -276,6 +294,57 @@ class SupabaseWarehouseService implements WarehouseService {
         .update({'status': status.key})
         .eq('id', orderId);
   }
+
+  @override
+  Future<List<Customer>> fetchCustomers() async {
+    final response = await _client
+        .from('customers')
+        .select()
+        .order('name', ascending: true);
+    return (response as List).map((json) => Customer.fromJson(json)).toList();
+  }
+
+  @override
+  Future<Customer> registerCustomer({
+    required String name,
+    String? address,
+    String? phone,
+    required String createdBy,
+  }) async {
+    final response = await _client.from('customers').insert({
+      'name': name.trim(),
+      'address': address?.trim(),
+      'phone': phone?.trim(),
+      'status': 'pending',
+      'created_by': createdBy,
+    }).select().single();
+    return Customer.fromJson(response);
+  }
+
+  @override
+  Future<void> approveCustomer(String customerId) async {
+    await _client.from('customers').update({'status': 'approved'}).eq('id', customerId);
+  }
+
+  @override
+  Future<void> rejectCustomer(String customerId) async {
+    await _client.from('customers').update({'status': 'rejected'}).eq('id', customerId);
+  }
+
+  @override
+  Future<Customer> createCustomerDirect({
+    required String name,
+    String? address,
+    String? phone,
+  }) async {
+    final response = await _client.from('customers').insert({
+      'name': name.trim(),
+      'address': address?.trim(),
+      'phone': phone?.trim(),
+      'status': 'approved',
+    }).select().single();
+    return Customer.fromJson(response);
+  }
 }
 
 class MockWarehouseService implements WarehouseService {
@@ -285,13 +354,22 @@ class MockWarehouseService implements WarehouseService {
   static List<Order> _orders = [];
   static List<DisposalRequest> _disposals = [];
   static List<PhysicalAudit> _audits = [];
+  static List<Customer> _customers = [];
 
   static List<Product> get productsList => _products;
   static List<StockBatch> get batchesList => _batches;
   static List<Order> get ordersList => _orders;
   static List<DisposalRequest> get disposalsList => _disposals;
+  static List<Customer> get customersList => _customers;
 
   static void resetDatabase() {
+    _customers = [
+      Customer(id: 'c1', name: 'Junction City Supermarket', address: 'Pyay Road, Yangon', phone: '09-1234567', status: CustomerStatus.approved, createdAt: DateTime.now()),
+      Customer(id: 'c2', name: 'City Mart Myanmar', address: 'Myanmar Plaza, Yangon', phone: '09-9876543', status: CustomerStatus.approved, createdAt: DateTime.now()),
+      Customer(id: 'c3', name: 'Ocean Supercenter', address: 'Mayangone, Yangon', phone: '09-4445556', status: CustomerStatus.approved, createdAt: DateTime.now()),
+      Customer(id: 'c4', name: 'G&G Convenience Store', address: 'Downtown, Yangon', phone: '09-7778889', status: CustomerStatus.pending, createdBy: 's1', createdAt: DateTime.now()),
+    ];
+
     _products = [
       Product(id: 'p1', name: 'Butter Bread', sku: 'MS-BUTTER-BREAD', price: 1500.0, createdAt: DateTime.now()),
       Product(id: 'p2', name: 'Crispy Rusks (Mini)', sku: 'MS-MINI-RUSK', price: 1200.0, createdAt: DateTime.now()),
@@ -542,6 +620,7 @@ class MockWarehouseService implements WarehouseService {
   @override
   Future<Order> createOrder({
     required String customerName,
+    String? customerId,
     required String salesStaffId,
     required List<OrderItem> items,
   }) async {
@@ -562,6 +641,7 @@ class MockWarehouseService implements WarehouseService {
     final newOrder = Order(
       id: orderId,
       customerName: customerName,
+      customerId: customerId,
       status: OrderStatus.pending,
       salesStaffId: salesStaffId,
       createdAt: DateTime.now(),
@@ -585,5 +665,69 @@ class MockWarehouseService implements WarehouseService {
     if (index != -1) {
       _orders[index] = _orders[index].copyWith(status: status);
     }
+  }
+
+  @override
+  Future<List<Customer>> fetchCustomers() async {
+    await Future.delayed(const Duration(milliseconds: 300));
+    return List.from(_customers);
+  }
+
+  @override
+  Future<Customer> registerCustomer({
+    required String name,
+    String? address,
+    String? phone,
+    required String createdBy,
+  }) async {
+    await Future.delayed(const Duration(milliseconds: 400));
+    final newCustomer = Customer(
+      id: 'c_${DateTime.now().millisecondsSinceEpoch}',
+      name: name,
+      address: address,
+      phone: phone,
+      status: CustomerStatus.pending,
+      createdBy: createdBy,
+      createdAt: DateTime.now(),
+    );
+    _customers.add(newCustomer);
+    return newCustomer;
+  }
+
+  @override
+  Future<void> approveCustomer(String customerId) async {
+    await Future.delayed(const Duration(milliseconds: 300));
+    final index = _customers.indexWhere((c) => c.id == customerId);
+    if (index != -1) {
+      _customers[index] = _customers[index].copyWith(status: CustomerStatus.approved);
+    }
+  }
+
+  @override
+  Future<void> rejectCustomer(String customerId) async {
+    await Future.delayed(const Duration(milliseconds: 300));
+    final index = _customers.indexWhere((c) => c.id == customerId);
+    if (index != -1) {
+      _customers[index] = _customers[index].copyWith(status: CustomerStatus.rejected);
+    }
+  }
+
+  @override
+  Future<Customer> createCustomerDirect({
+    required String name,
+    String? address,
+    String? phone,
+  }) async {
+    await Future.delayed(const Duration(milliseconds: 400));
+    final newCustomer = Customer(
+      id: 'c_${DateTime.now().millisecondsSinceEpoch}',
+      name: name,
+      address: address,
+      phone: phone,
+      status: CustomerStatus.approved,
+      createdAt: DateTime.now(),
+    );
+    _customers.add(newCustomer);
+    return newCustomer;
   }
 }

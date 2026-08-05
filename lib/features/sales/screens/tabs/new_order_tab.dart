@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import 'package:may_snacks/models/product.dart';
+import 'package:may_snacks/models/customer.dart';
 import 'package:may_snacks/features/auth/controllers/auth_controller.dart';
 import 'package:may_snacks/features/warehouse/controllers/warehouse_controller.dart';
 
@@ -13,14 +14,116 @@ class NewOrderTab extends StatefulWidget {
 }
 
 class _NewOrderTabState extends State<NewOrderTab> {
-  final _customerController = TextEditingController();
+  final _customerTextController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
   String _searchQuery = '';
+  Customer? _selectedCustomer;
+
+  // New shop registration form controllers
+  final _newShopNameController = TextEditingController();
+  final _newShopAddressController = TextEditingController();
+  final _newShopPhoneController = TextEditingController();
+  final _registerFormKey = GlobalKey<FormState>();
 
   @override
   void dispose() {
-    _customerController.dispose();
+    _customerTextController.dispose();
+    _newShopNameController.dispose();
+    _newShopAddressController.dispose();
+    _newShopPhoneController.dispose();
     super.dispose();
+  }
+
+  void _showRegisterShopDialog() {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Register New Field Shop'),
+          content: Form(
+            key: _registerFormKey,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text(
+                    'Submitting a new shop will send a request to Admin for approval to add to the official store dropdown list.',
+                    style: TextStyle(fontSize: 12, color: Colors.grey),
+                  ),
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: _newShopNameController,
+                    validator: (v) => v == null || v.trim().isEmpty ? 'Please enter store name' : null,
+                    decoration: const InputDecoration(
+                      labelText: 'Store Name *',
+                      hintText: 'e.g., Seiko Wholesale Mart',
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    controller: _newShopAddressController,
+                    decoration: const InputDecoration(
+                      labelText: 'Address (Optional)',
+                      hintText: 'e.g., Hledan, Kamayut Township',
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    controller: _newShopPhoneController,
+                    keyboardType: TextInputType.phone,
+                    decoration: const InputDecoration(
+                      labelText: 'Phone Number (Optional)',
+                      hintText: 'e.g., 09-987654321',
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                if (_registerFormKey.currentState!.validate()) {
+                  final warehouseController = context.read<WarehouseController>();
+                  final authController = context.read<AuthController>();
+                  final shopName = _newShopNameController.text.trim();
+
+                  final success = await warehouseController.registerCustomer(
+                    name: shopName,
+                    address: _newShopAddressController.text.trim().isEmpty ? null : _newShopAddressController.text.trim(),
+                    phone: _newShopPhoneController.text.trim().isEmpty ? null : _newShopPhoneController.text.trim(),
+                    createdBy: authController.profile?.id ?? '',
+                  );
+
+                  if (success && mounted) {
+                    Navigator.pop(context);
+                    _customerTextController.text = shopName;
+                    setState(() {
+                      _selectedCustomer = null;
+                    });
+                    _newShopNameController.clear();
+                    _newShopAddressController.clear();
+                    _newShopPhoneController.clear();
+
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Registered "$shopName"! Sent request for Admin approval.'),
+                        backgroundColor: Colors.green,
+                      ),
+                    );
+                  }
+                }
+              },
+              child: const Text('Submit Request'),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   void _showCartSheet() {
@@ -44,7 +147,6 @@ class _NewOrderTabState extends State<NewOrderTab> {
         return StatefulBuilder(
           builder: (context, setSheetState) {
             final theme = Theme.of(context);
-            // Refresh counts inside sheet
             final cartItems = cart.entries.toList();
             double grandTotal = 0;
 
@@ -52,6 +154,8 @@ class _NewOrderTabState extends State<NewOrderTab> {
               final product = products.firstWhere((p) => p.id == entry.key);
               grandTotal += entry.value * product.price;
             }
+
+            final customerName = _selectedCustomer?.name ?? _customerTextController.text.trim();
 
             return Container(
               decoration: BoxDecoration(
@@ -81,6 +185,8 @@ class _NewOrderTabState extends State<NewOrderTab> {
                       ),
                     ],
                   ),
+                  const SizedBox(height: 4),
+                  Text('Customer: $customerName', style: TextStyle(color: theme.primaryColor, fontWeight: FontWeight.bold)),
                   const Divider(height: 24),
                   if (cartItems.isEmpty)
                     const SizedBox(
@@ -120,7 +226,7 @@ class _NewOrderTabState extends State<NewOrderTab> {
                                       onPressed: () {
                                         warehouseController.updateCartItem(product.id, entry.value - 1);
                                         setSheetState(() {});
-                                        setState(() {}); // refresh floating button
+                                        setState(() {});
                                       },
                                     ),
                                     Text(
@@ -173,14 +279,17 @@ class _NewOrderTabState extends State<NewOrderTab> {
                             ? null
                             : () async {
                                 final success = await warehouseController.submitOrder(
-                                  customerName: _customerController.text,
+                                  customerName: customerName,
+                                  customerId: _selectedCustomer?.id,
                                   salesStaffId: authController.profile?.id ?? '',
                                 );
 
                                 if (success && mounted) {
                                   Navigator.pop(context);
-                                  _customerController.clear();
-                                  setState(() {});
+                                  _customerTextController.clear();
+                                  setState(() {
+                                    _selectedCustomer = null;
+                                  });
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     const SnackBar(
                                       content: Text('Wholesale order submitted successfully!'),
@@ -216,6 +325,7 @@ class _NewOrderTabState extends State<NewOrderTab> {
     final theme = Theme.of(context);
     final warehouseController = context.watch<WarehouseController>();
     final products = warehouseController.products;
+    final approvedCustomers = warehouseController.approvedCustomers;
     final cart = warehouseController.cart;
 
     final filteredProducts = products.where((p) {
@@ -228,7 +338,7 @@ class _NewOrderTabState extends State<NewOrderTab> {
         key: _formKey,
         child: Column(
           children: [
-            // Customer Info Input Card
+            // Customer Store Selection Card
             Card(
               margin: EdgeInsets.zero,
               child: Padding(
@@ -236,14 +346,53 @@ class _NewOrderTabState extends State<NewOrderTab> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('Customer Store / Store Name', style: TextStyle(fontWeight: FontWeight.bold)),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text('Customer / Shop Store', style: TextStyle(fontWeight: FontWeight.bold)),
+                        TextButton.icon(
+                          onPressed: _showRegisterShopDialog,
+                          icon: const Icon(Icons.add_location_alt_outlined, size: 18),
+                          label: const Text('+ Register New Shop', style: TextStyle(fontSize: 12)),
+                        ),
+                      ],
+                    ),
                     const SizedBox(height: 8),
-                    TextFormField(
-                      controller: _customerController,
-                      validator: (v) => v == null || v.trim().isEmpty ? 'Please enter customer store name' : null,
+                    DropdownButtonFormField<Customer>(
+                      value: _selectedCustomer,
+                      isExpanded: true,
+                      hint: Text(
+                        _customerTextController.text.isNotEmpty
+                            ? 'Custom Shop: ${_customerTextController.text}'
+                            : 'Select Master Customer Store...',
+                      ),
+                      validator: (v) {
+                        if (v == null && _customerTextController.text.trim().isEmpty) {
+                          return 'Please select or register a customer store';
+                        }
+                        return null;
+                      },
+                      items: approvedCustomers.map((customer) {
+                        return DropdownMenuItem<Customer>(
+                          value: customer,
+                          child: Text(
+                            customer.name,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(fontWeight: FontWeight.w600),
+                          ),
+                        );
+                      }).toList(),
+                      onChanged: (val) {
+                        setState(() {
+                          _selectedCustomer = val;
+                          if (val != null) {
+                            _customerTextController.text = val.name;
+                          }
+                        });
+                      },
                       decoration: const InputDecoration(
-                        hintText: 'e.g., Junction City Supermarket',
                         isDense: true,
+                        prefixIcon: Icon(Icons.storefront_rounded),
                       ),
                     ),
                   ],

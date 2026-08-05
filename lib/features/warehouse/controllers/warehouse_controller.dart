@@ -4,6 +4,7 @@ import '../../../models/batch.dart';
 import '../../../models/order.dart';
 import '../../../models/disposal.dart';
 import '../../../models/physical_audit.dart';
+import '../../../models/customer.dart';
 import '../../../services/warehouse_service.dart';
 
 class WarehouseController extends ChangeNotifier {
@@ -14,6 +15,7 @@ class WarehouseController extends ChangeNotifier {
   List<Order> _orders = [];
   List<DisposalRequest> _disposals = [];
   List<PhysicalAudit> _audits = [];
+  List<Customer> _customers = [];
 
   // Cart state for mobile sales ordering
   final Map<String, int> _cart = {};
@@ -28,6 +30,9 @@ class WarehouseController extends ChangeNotifier {
   List<Order> get orders => _orders;
   List<DisposalRequest> get disposals => _disposals;
   List<PhysicalAudit> get audits => _audits;
+  List<Customer> get customers => _customers;
+  List<Customer> get approvedCustomers => _customers.where((c) => c.status == CustomerStatus.approved).toList();
+  List<Customer> get pendingCustomers => _customers.where((c) => c.status == CustomerStatus.pending).toList();
   
   Map<String, int> get cart => _cart;
   int get cartItemCount => _cart.values.fold(0, (sum, qty) => sum + qty);
@@ -51,6 +56,7 @@ class WarehouseController extends ChangeNotifier {
 
   Future<bool> submitOrder({
     required String customerName,
+    String? customerId,
     required String salesStaffId,
   }) async {
     if (_cart.isEmpty || customerName.trim().isEmpty) {
@@ -79,6 +85,7 @@ class WarehouseController extends ChangeNotifier {
 
       await _service.createOrder(
         customerName: customerName.trim(),
+        customerId: customerId,
         salesStaffId: salesStaffId,
         items: items,
       );
@@ -106,6 +113,7 @@ class WarehouseController extends ChangeNotifier {
         _service.fetchIncomingOrders(),
         _service.fetchDisposalRequests(),
         _service.fetchPhysicalAudits(),
+        _service.fetchCustomers(),
       ]);
 
       _products = results[0] as List<Product>;
@@ -113,6 +121,7 @@ class WarehouseController extends ChangeNotifier {
       _orders = results[2] as List<Order>;
       _disposals = results[3] as List<DisposalRequest>;
       _audits = results[4] as List<PhysicalAudit>;
+      _customers = results[5] as List<Customer>;
     } catch (e) {
       _errorMessage = e.toString().replaceAll('Exception: ', '');
     } finally {
@@ -260,6 +269,92 @@ class WarehouseController extends ChangeNotifier {
 
     try {
       await _service.updateOrderStatus(orderId, status);
+      await loadAllWarehouseData();
+      return true;
+    } catch (e) {
+      _errorMessage = e.toString().replaceAll('Exception: ', '');
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    }
+  }
+
+  Future<bool> registerCustomer({
+    required String name,
+    String? address,
+    String? phone,
+    required String createdBy,
+  }) async {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      await _service.registerCustomer(
+        name: name,
+        address: address,
+        phone: phone,
+        createdBy: createdBy,
+      );
+      await loadAllWarehouseData();
+      return true;
+    } catch (e) {
+      _errorMessage = e.toString().replaceAll('Exception: ', '');
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    }
+  }
+
+  Future<bool> approveCustomer(String customerId) async {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      await _service.approveCustomer(customerId);
+      await loadAllWarehouseData();
+      return true;
+    } catch (e) {
+      _errorMessage = e.toString().replaceAll('Exception: ', '');
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    }
+  }
+
+  Future<bool> rejectCustomer(String customerId) async {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      await _service.rejectCustomer(customerId);
+      await loadAllWarehouseData();
+      return true;
+    } catch (e) {
+      _errorMessage = e.toString().replaceAll('Exception: ', '');
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    }
+  }
+
+  Future<bool> addCustomerDirect({
+    required String name,
+    String? address,
+    String? phone,
+  }) async {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      await _service.createCustomerDirect(
+        name: name,
+        address: address,
+        phone: phone,
+      );
       await loadAllWarehouseData();
       return true;
     } catch (e) {

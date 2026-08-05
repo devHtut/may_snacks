@@ -81,6 +81,7 @@ class OrderItem {
 class Order {
   final String id;
   final String customerName;
+  final String? customerId;
   final OrderStatus status;
   final String? salesStaffId;
   final DateTime createdAt;
@@ -89,6 +90,7 @@ class Order {
   Order({
     required this.id,
     required this.customerName,
+    this.customerId,
     required this.status,
     this.salesStaffId,
     required this.createdAt,
@@ -109,6 +111,7 @@ class Order {
     return Order(
       id: json['id'] as String,
       customerName: json['customer_name'] as String,
+      customerId: json['customer_id'] as String?,
       status: OrderStatus.fromKey(json['status'] as String),
       salesStaffId: json['sales_staff_id'] as String?,
       createdAt: DateTime.parse(json['created_at'] as String),
@@ -120,6 +123,7 @@ class Order {
     return {
       'id': id,
       'customer_name': customerName,
+      'customer_id': customerId,
       'status': status.key,
       'sales_staff_id': salesStaffId,
       'created_at': createdAt.toIso8601String(),
@@ -129,6 +133,7 @@ class Order {
   Order copyWith({
     String? id,
     String? customerName,
+    String? customerId,
     OrderStatus? status,
     String? salesStaffId,
     DateTime? createdAt,
@@ -137,6 +142,7 @@ class Order {
     return Order(
       id: id ?? this.id,
       customerName: customerName ?? this.customerName,
+      customerId: customerId ?? this.customerId,
       status: status ?? this.status,
       salesStaffId: salesStaffId ?? this.salesStaffId,
       createdAt: createdAt ?? this.createdAt,

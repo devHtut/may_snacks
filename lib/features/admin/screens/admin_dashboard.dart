@@ -9,6 +9,7 @@ import 'tabs/order_audit_tab.dart';
 import 'tabs/disposal_approvals_tab.dart';
 import 'tabs/system_logs_tab.dart';
 import 'tabs/sales_analytics_tab.dart';
+import 'tabs/customer_management_tab.dart';
 
 class AdminDashboard extends StatefulWidget {
   const AdminDashboard({super.key});
@@ -32,6 +33,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
   final List<Widget> _tabs = [
     const UserManagementTab(),
     const ProductCatalogTab(),
+    const CustomerManagementTab(),
     const OrderAuditTab(),
     const DisposalApprovalsTab(),
     const SystemLogsTab(),
@@ -97,6 +99,11 @@ class _AdminDashboardState extends State<AdminDashboard> {
                 icon: Icon(Icons.menu_book_outlined),
                 selectedIcon: Icon(Icons.menu_book_rounded),
                 label: Text('Products catalog'),
+              ),
+              NavigationRailDestination(
+                icon: Icon(Icons.storefront_outlined),
+                selectedIcon: Icon(Icons.storefront_rounded),
+                label: Text('Customer Stores'),
               ),
               NavigationRailDestination(
                 icon: Icon(Icons.history_outlined),
