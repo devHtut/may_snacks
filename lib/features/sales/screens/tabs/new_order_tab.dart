@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import 'package:may_snacks/models/product.dart';
@@ -50,6 +50,10 @@ class _NewOrderTabState extends State<NewOrderTab> {
   }
 
   void _showRegisterShopDialog() {
+    _newShopNameController.clear();
+    _newShopPhoneController.clear();
+    _newShopAddressController.clear();
+
     String? selectedRegion;
     String? selectedTownship;
 
@@ -116,18 +120,34 @@ class _NewOrderTabState extends State<NewOrderTab> {
                       const SizedBox(height: 12),
                       TextFormField(
                         controller: _newShopPhoneController,
-                        keyboardType: TextInputType.phone,
+                        keyboardType: TextInputType.number,
+                        maxLength: 11,
+                        inputFormatters: [
+                          FilteringTextInputFormatter.digitsOnly,
+                          LengthLimitingTextInputFormatter(11),
+                        ],
                         decoration: const InputDecoration(
                           labelText: 'Phone Number *',
                           hintText: 'e.g., 09123456789',
+                          counterText: '',
+                          prefixIcon: Icon(Icons.phone_android_rounded),
                         ),
                         validator: (v) {
                           if (v == null || v.trim().isEmpty) {
                             return 'Phone number is required';
                           }
                           final trimmed = v.trim();
+                          if (!trimmed.startsWith('09')) {
+                            return 'Phone number must start with 09';
+                          }
+                          if (trimmed.length < 9) {
+                            return 'Must be at least 9 digits long (e.g. 09xxxxxxx)';
+                          }
+                          if (trimmed.length > 11) {
+                            return 'Cannot exceed 11 digits';
+                          }
                           if (!RegExp(r'^09\d{7,9}$').hasMatch(trimmed)) {
-                            return 'Must start with 09, numbers only, & 9-11 digits long';
+                            return 'Only numbers are allowed starting with 09';
                           }
                           return null;
                         },
