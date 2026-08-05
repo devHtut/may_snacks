@@ -7,7 +7,7 @@ import 'warehouse_service.dart';
 
 abstract class AdminService {
   Future<List<AuditLog>> fetchAuditLogs();
-  Future<void> logEvent(String action, String description);
+  Future<void> logEvent(String action, String description, {String? actorName});
   Future<Product> addProduct(String name, String sku, double price);
   Future<void> updateProductPrice(String productId, double newPrice);
   Future<void> approveDisposal(String disposalId);
@@ -30,7 +30,7 @@ class SupabaseAdminService implements AdminService {
   }
 
   @override
-  Future<void> logEvent(String action, String description) async {
+  Future<void> logEvent(String action, String description, {String? actorName}) async {
     final user = _client.auth.currentUser;
     await _client.from('audit_logs').insert({
       'actor_id': user?.id,
@@ -125,10 +125,50 @@ class SupabaseAdminService implements AdminService {
 class MockAdminService implements AdminService {
   static final List<AuditLog> _logs = [
     AuditLog(
-      id: 'l1',
-      actorId: 'mock-admin-id',
+      id: 'l_1',
+      actorId: 'sales-1',
+      action: 'ORDER_SUBMITTED',
+      description: 'Sales Staff Daw Hla submitted wholesale order #ORD-101 for Junction City Mart (Total: Ks 15,000).',
+      createdAt: DateTime.now().subtract(const Duration(hours: 1)),
+      actorName: 'Daw Hla (Sales Staff)',
+    ),
+    AuditLog(
+      id: 'l_2',
+      actorId: 'manager-1',
+      action: 'ORDER_FULFILLED',
+      description: 'Warehouse Manager U Mg Mg packed order #ORD-101 for Junction City Mart using FEFO stock allocation.',
+      createdAt: DateTime.now().subtract(const Duration(hours: 2)),
+      actorName: 'U Mg Mg (Warehouse Manager)',
+    ),
+    AuditLog(
+      id: 'l_3',
+      actorId: 'sales-2',
+      action: 'SHOP_REGISTERED',
+      description: 'Sales Staff Ko Min requested field store registration for "Super One Mart" in Pabedan, Yangon.',
+      createdAt: DateTime.now().subtract(const Duration(hours: 3)),
+      actorName: 'Ko Min (Sales Staff)',
+    ),
+    AuditLog(
+      id: 'l_4',
+      actorId: 'admin-1',
+      action: 'STORE_APPROVED',
+      description: 'Admin Ko Myo approved field customer store "Super One Mart" into official master dropdown.',
+      createdAt: DateTime.now().subtract(const Duration(hours: 4)),
+      actorName: 'Ko Myo (Admin)',
+    ),
+    AuditLog(
+      id: 'l_5',
+      actorId: 'manager-1',
+      action: 'STOCK_IN',
+      description: 'Warehouse Manager U Mg Mg recorded Stock-In for Butter Bread (Batch: #BATCH-2026-001, Qty: 200 pcs).',
+      createdAt: DateTime.now().subtract(const Duration(days: 1)),
+      actorName: 'U Mg Mg (Warehouse Manager)',
+    ),
+    AuditLog(
+      id: 'l_6',
+      actorId: 'admin-1',
       action: 'SYSTEM_BOOTSTRAP',
-      description: 'System bootstrapped with default master categories.',
+      description: 'System bootstrapped with default master inventory catalog.',
       createdAt: DateTime.now().subtract(const Duration(days: 2)),
       actorName: 'Ko Myo (Admin)',
     ),
@@ -141,16 +181,16 @@ class MockAdminService implements AdminService {
   }
 
   @override
-  Future<void> logEvent(String action, String description) async {
+  Future<void> logEvent(String action, String description, {String? actorName}) async {
     _logs.insert(
       0,
       AuditLog(
         id: 'l_${DateTime.now().millisecondsSinceEpoch}',
-        actorId: 'mock-admin-id',
+        actorId: 'mock-actor-id',
         action: action,
         description: description,
         createdAt: DateTime.now(),
-        actorName: 'Ko Myo (Admin)',
+        actorName: actorName ?? 'Ko Myo (Admin)',
       ),
     );
   }

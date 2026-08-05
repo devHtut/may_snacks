@@ -6,9 +6,11 @@ import '../../../models/disposal.dart';
 import '../../../models/physical_audit.dart';
 import '../../../models/customer.dart';
 import '../../../services/warehouse_service.dart';
+import '../../../services/admin_service.dart';
 
 class WarehouseController extends ChangeNotifier {
   final WarehouseService _service;
+  final AdminService? _adminService;
 
   List<Product> _products = [];
   List<StockBatch> _batches = [];
@@ -23,7 +25,7 @@ class WarehouseController extends ChangeNotifier {
   bool _isLoading = false;
   String? _errorMessage;
 
-  WarehouseController(this._service);
+  WarehouseController(this._service, [this._adminService]);
 
   List<Product> get products => _products;
   List<StockBatch> get batches => _batches;
@@ -125,6 +127,12 @@ class WarehouseController extends ChangeNotifier {
         items: items,
       );
 
+      await _adminService?.logEvent(
+        'ORDER_SUBMITTED',
+        'Sales Staff submitted wholesale order for "$customerName" (${items.length} items).',
+        actorName: 'Daw Hla (Sales Staff)',
+      );
+
       _cart.clear();
       await loadAllWarehouseData();
       return true;
@@ -183,6 +191,11 @@ class WarehouseController extends ChangeNotifier {
         expiryDate: expiryDate,
       );
       _batches.add(newBatch);
+      await _adminService?.logEvent(
+        'STOCK_IN',
+        'Warehouse Manager recorded Stock-In for batch #$batchNumber (Qty: $quantity pcs, Expiry: ${expiryDate.toIso8601String().substring(0, 10)}).',
+        actorName: 'U Mg Mg (Warehouse Manager)',
+      );
       _isLoading = false;
       notifyListeners();
       return true;
@@ -206,6 +219,13 @@ class WarehouseController extends ChangeNotifier {
       final updatedBatches = await _service.fetchBatches();
       _orders = updatedOrders;
       _batches = updatedBatches;
+
+      await _adminService?.logEvent(
+        'ORDER_FULFILLED',
+        'Warehouse Manager packed order (ID: $orderId) using FEFO stock allocation.',
+        actorName: 'U Mg Mg (Warehouse Manager)',
+      );
+
       _isLoading = false;
       notifyListeners();
       return true;
@@ -235,6 +255,11 @@ class WarehouseController extends ChangeNotifier {
         reason: reason,
       );
       _disposals.insert(0, newDisposal);
+      await _adminService?.logEvent(
+        'DISPOSAL_REQUESTED',
+        'Warehouse Manager submitted disposal request for $quantity pcs (Reason: $reason).',
+        actorName: 'U Mg Mg (Warehouse Manager)',
+      );
       _isLoading = false;
       notifyListeners();
       return true;
@@ -269,6 +294,13 @@ class WarehouseController extends ChangeNotifier {
       // Reload batches as stock might be adjusted by the audit
       final updatedBatches = await _service.fetchBatches();
       _batches = updatedBatches;
+
+      await _adminService?.logEvent(
+        'PHYSICAL_AUDIT',
+        'Warehouse Manager logged physical stock audit (System Qty: $systemQuantity, Physical Qty: $physicalQuantity).',
+        actorName: 'U Mg Mg (Warehouse Manager)',
+      );
+
       _isLoading = false;
       notifyListeners();
       return true;
@@ -287,6 +319,11 @@ class WarehouseController extends ChangeNotifier {
 
     try {
       await _service.cancelOrder(orderId);
+      await _adminService?.logEvent(
+        'ORDER_CANCELLED',
+        'Sales Staff cancelled pending order (ID: $orderId).',
+        actorName: 'Daw Hla (Sales Staff)',
+      );
       await loadAllWarehouseData();
       return true;
     } catch (e) {
@@ -304,6 +341,11 @@ class WarehouseController extends ChangeNotifier {
 
     try {
       await _service.updateOrderStatus(orderId, status);
+      await _adminService?.logEvent(
+        'ORDER_STATUS_CHANGED',
+        'Warehouse Manager updated order (ID: $orderId) status to ${status.displayName}.',
+        actorName: 'U Mg Mg (Warehouse Manager)',
+      );
       await loadAllWarehouseData();
       return true;
     } catch (e) {
@@ -335,6 +377,11 @@ class WarehouseController extends ChangeNotifier {
         phone: phone,
         createdBy: createdBy,
       );
+      await _adminService?.logEvent(
+        'SHOP_REGISTERED',
+        'Sales Staff requested field store registration for "$name" in $township, $region.',
+        actorName: 'Daw Hla (Sales Staff)',
+      );
       await loadAllWarehouseData();
       return true;
     } catch (e) {
@@ -352,6 +399,11 @@ class WarehouseController extends ChangeNotifier {
 
     try {
       await _service.approveCustomer(customerId);
+      await _adminService?.logEvent(
+        'STORE_APPROVED',
+        'Admin approved field customer store into official master dropdown.',
+        actorName: 'Ko Myo (Admin)',
+      );
       await loadAllWarehouseData();
       return true;
     } catch (e) {
@@ -369,6 +421,11 @@ class WarehouseController extends ChangeNotifier {
 
     try {
       await _service.rejectCustomer(customerId);
+      await _adminService?.logEvent(
+        'STORE_DEACTIVATED',
+        'Admin deactivated customer store from master dropdown.',
+        actorName: 'Ko Myo (Admin)',
+      );
       await loadAllWarehouseData();
       return true;
     } catch (e) {
@@ -398,6 +455,11 @@ class WarehouseController extends ChangeNotifier {
         address: address,
         phone: phone,
       );
+      await _adminService?.logEvent(
+        'STORE_APPROVED',
+        'Admin created official customer store "$name" in $township, $region.',
+        actorName: 'Ko Myo (Admin)',
+      );
       await loadAllWarehouseData();
       return true;
     } catch (e) {
@@ -415,6 +477,11 @@ class WarehouseController extends ChangeNotifier {
 
     try {
       await _service.deleteCustomer(customerId);
+      await _adminService?.logEvent(
+        'STORE_DELETED',
+        'Admin permanently deleted 0-order customer store.',
+        actorName: 'Ko Myo (Admin)',
+      );
       await loadAllWarehouseData();
       return true;
     } catch (e) {

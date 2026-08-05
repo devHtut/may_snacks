@@ -73,5 +73,16 @@ void main() {
       expect(logs.length, equals(initialLogsCount + 1));
       expect(logs.first.action, equals('DISPOSAL_APPROVED'));
     });
+
+    test('Audit logs fetch and distinguish activities across Sales Staff, Manager, and Admin', () async {
+      final logs = await adminService.fetchAuditLogs();
+      expect(logs, isNotEmpty);
+      expect(logs.any((l) => l.action == 'ORDER_SUBMITTED'), isTrue);
+      expect(logs.any((l) => l.action == 'ORDER_FULFILLED'), isTrue);
+      expect(logs.any((l) => l.action == 'STOCK_IN'), isTrue);
+      expect(logs.any((l) => l.actorName != null && l.actorName!.contains('Sales Staff')), isTrue);
+      expect(logs.any((l) => l.actorName != null && l.actorName!.contains('Warehouse Manager')), isTrue);
+      expect(logs.any((l) => l.actorName != null && l.actorName!.contains('Admin')), isTrue);
+    });
   });
 }

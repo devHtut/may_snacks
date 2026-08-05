@@ -60,17 +60,20 @@ class MyApp extends StatelessWidget {
               ? MockWarehouseService()
               : SupabaseWarehouseService(Supabase.instance.client),
         ),
-        // Provide the warehouse controller
-        ChangeNotifierProxyProvider<WarehouseService, WarehouseController>(
-          create: (context) => WarehouseController(context.read<WarehouseService>()),
-          update: (context, service, controller) =>
-              controller ?? WarehouseController(service),
-        ),
         // Provide the admin service
         Provider<AdminService>(
           create: (_) => SupabaseConfig.useMock
               ? MockAdminService()
               : SupabaseAdminService(Supabase.instance.client),
+        ),
+        // Provide the warehouse controller
+        ChangeNotifierProxyProvider2<WarehouseService, AdminService, WarehouseController>(
+          create: (context) => WarehouseController(
+            context.read<WarehouseService>(),
+            context.read<AdminService>(),
+          ),
+          update: (context, wService, aService, controller) =>
+              controller ?? WarehouseController(wService, aService),
         ),
         // Provide the admin controller
         ChangeNotifierProvider<AdminController>(
