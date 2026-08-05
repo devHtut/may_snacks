@@ -14,7 +14,6 @@ class NewOrderTab extends StatefulWidget {
 }
 
 class _NewOrderTabState extends State<NewOrderTab> {
-  final _customerTextController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
   String _searchQuery = '';
   Customer? _selectedCustomer;
@@ -27,7 +26,6 @@ class _NewOrderTabState extends State<NewOrderTab> {
 
   @override
   void dispose() {
-    _customerTextController.dispose();
     _newShopNameController.dispose();
     _newShopAddressController.dispose();
     _newShopPhoneController.dispose();
@@ -101,18 +99,15 @@ class _NewOrderTabState extends State<NewOrderTab> {
 
                   if (success && mounted) {
                     Navigator.pop(context);
-                    _customerTextController.text = shopName;
-                    setState(() {
-                      _selectedCustomer = null;
-                    });
                     _newShopNameController.clear();
                     _newShopAddressController.clear();
                     _newShopPhoneController.clear();
 
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
-                        content: Text('Registered "$shopName"! Sent request for Admin approval.'),
+                        content: Text('Registration request for "$shopName" submitted! It will appear in the dropdown once Admin approves it.'),
                         backgroundColor: Colors.green,
+                        duration: const Duration(seconds: 4),
                       ),
                     );
                   }
@@ -155,7 +150,7 @@ class _NewOrderTabState extends State<NewOrderTab> {
               grandTotal += entry.value * product.price;
             }
 
-            final customerName = _selectedCustomer?.name ?? _customerTextController.text.trim();
+            final customerName = _selectedCustomer?.name ?? '';
 
             return Container(
               decoration: BoxDecoration(
@@ -286,7 +281,6 @@ class _NewOrderTabState extends State<NewOrderTab> {
 
                                 if (success && mounted) {
                                   Navigator.pop(context);
-                                  _customerTextController.clear();
                                   setState(() {
                                     _selectedCustomer = null;
                                   });
@@ -361,14 +355,10 @@ class _NewOrderTabState extends State<NewOrderTab> {
                     DropdownButtonFormField<Customer>(
                       value: _selectedCustomer,
                       isExpanded: true,
-                      hint: Text(
-                        _customerTextController.text.isNotEmpty
-                            ? 'Custom Shop: ${_customerTextController.text}'
-                            : 'Select Master Customer Store...',
-                      ),
+                      hint: const Text('Select Approved Master Customer Store...'),
                       validator: (v) {
-                        if (v == null && _customerTextController.text.trim().isEmpty) {
-                          return 'Please select or register a customer store';
+                        if (v == null) {
+                          return 'Please select an approved customer store';
                         }
                         return null;
                       },
@@ -385,9 +375,6 @@ class _NewOrderTabState extends State<NewOrderTab> {
                       onChanged: (val) {
                         setState(() {
                           _selectedCustomer = val;
-                          if (val != null) {
-                            _customerTextController.text = val.name;
-                          }
                         });
                       },
                       decoration: const InputDecoration(

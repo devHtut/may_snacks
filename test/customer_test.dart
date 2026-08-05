@@ -36,6 +36,8 @@ void main() {
       final registered = controller.customers.last;
       expect(registered.name, equals('Seiko Wholesale Mart'));
       expect(registered.status, equals(CustomerStatus.pending));
+      // Verify pending store does NOT appear in approved master dropdown list for sales reps
+      expect(controller.approvedCustomers.any((c) => c.name == 'Seiko Wholesale Mart'), isFalse);
     });
 
     test('Admin approves a pending customer request and adds it to master dropdown', () async {
