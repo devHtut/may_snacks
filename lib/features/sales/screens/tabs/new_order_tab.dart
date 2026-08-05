@@ -64,7 +64,10 @@ class _NewOrderTabState extends State<NewOrderTab> {
         return StatefulBuilder(
           builder: (context, setDialogState) {
             final regions = LocationService.getRegions(_locationData);
-            final townships = LocationService.getTownships(_locationData, selectedRegion);
+            final townships = LocationService.getTownships(
+              _locationData,
+              selectedRegion,
+            );
 
             return AlertDialog(
               title: const Text('Register New Field Shop'),
@@ -81,7 +84,9 @@ class _NewOrderTabState extends State<NewOrderTab> {
                       const SizedBox(height: 16),
                       TextFormField(
                         controller: _newShopNameController,
-                        validator: (v) => v == null || v.trim().isEmpty ? 'Please enter store name' : null,
+                        validator: (v) => v == null || v.trim().isEmpty
+                            ? 'Please enter store name'
+                            : null,
                         decoration: const InputDecoration(
                           labelText: 'Store Name *',
                           hintText: 'e.g., Seiko Wholesale Mart',
@@ -91,8 +96,11 @@ class _NewOrderTabState extends State<NewOrderTab> {
                       DropdownButtonFormField<String>(
                         value: selectedRegion,
                         isExpanded: true,
-                        decoration: const InputDecoration(labelText: 'Region / State *'),
-                        validator: (v) => v == null ? 'Please select Region / State' : null,
+                        decoration: const InputDecoration(
+                          labelText: 'Region / State *',
+                        ),
+                        validator: (v) =>
+                            v == null ? 'Please select Region / State' : null,
                         items: regions.map((r) {
                           return DropdownMenuItem(value: r, child: Text(r));
                         }).toList(),
@@ -107,8 +115,11 @@ class _NewOrderTabState extends State<NewOrderTab> {
                       DropdownButtonFormField<String>(
                         value: selectedTownship,
                         isExpanded: true,
-                        decoration: const InputDecoration(labelText: 'Township *'),
-                        validator: (v) => v == null ? 'Please select Township' : null,
+                        decoration: const InputDecoration(
+                          labelText: 'Township *',
+                        ),
+                        validator: (v) =>
+                            v == null ? 'Please select Township' : null,
                         items: townships.map((t) {
                           return DropdownMenuItem(value: t, child: Text(t));
                         }).toList(),
@@ -173,18 +184,23 @@ class _NewOrderTabState extends State<NewOrderTab> {
                 ElevatedButton(
                   onPressed: () async {
                     if (_registerFormKey.currentState!.validate()) {
-                      final warehouseController = context.read<WarehouseController>();
+                      final warehouseController = context
+                          .read<WarehouseController>();
                       final authController = context.read<AuthController>();
                       final shopName = _newShopNameController.text.trim();
 
-                      final success = await warehouseController.registerCustomer(
-                        name: shopName,
-                        region: selectedRegion!,
-                        township: selectedTownship!,
-                        address: _newShopAddressController.text.trim().isEmpty ? null : _newShopAddressController.text.trim(),
-                        phone: _newShopPhoneController.text.trim(),
-                        createdBy: authController.profile?.id ?? '',
-                      );
+                      final success = await warehouseController
+                          .registerCustomer(
+                            name: shopName,
+                            region: selectedRegion!,
+                            township: selectedTownship!,
+                            address:
+                                _newShopAddressController.text.trim().isEmpty
+                                ? null
+                                : _newShopAddressController.text.trim(),
+                            phone: _newShopPhoneController.text.trim(),
+                            createdBy: authController.profile?.id ?? '',
+                          );
 
                       if (success && mounted) {
                         Navigator.pop(context);
@@ -194,7 +210,9 @@ class _NewOrderTabState extends State<NewOrderTab> {
 
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
-                            content: Text('Registration request for "$shopName" submitted! It will appear in the dropdown once Admin approves it.'),
+                            content: Text(
+                              'Registration request for "$shopName" submitted! It will appear in the dropdown once Admin approves it.',
+                            ),
                             backgroundColor: Colors.green,
                             duration: const Duration(seconds: 4),
                           ),
@@ -212,8 +230,14 @@ class _NewOrderTabState extends State<NewOrderTab> {
     );
   }
 
-  void _showQuantityInputDialog(Product product, int currentQty, int totalStock) {
-    final qtyController = TextEditingController(text: currentQty > 0 ? '$currentQty' : '');
+  void _showQuantityInputDialog(
+    Product product,
+    int currentQty,
+    int totalStock,
+  ) {
+    final qtyController = TextEditingController(
+      text: currentQty > 0 ? '$currentQty' : '',
+    );
     final inputFormKey = GlobalKey<FormState>();
 
     showDialog(
@@ -229,10 +253,16 @@ class _NewOrderTabState extends State<NewOrderTab> {
               children: [
                 Row(
                   children: [
-                    const Icon(Icons.inventory_2_outlined, size: 18, color: Colors.grey),
+                    const Icon(
+                      Icons.inventory_2_outlined,
+                      size: 18,
+                      color: Colors.grey,
+                    ),
                     const SizedBox(width: 6),
                     Text(
-                      totalStock > 0 ? 'Available Stock: $totalStock units' : 'Item is Out of Stock',
+                      totalStock > 0
+                          ? 'Available Stock: $totalStock units'
+                          : 'Item is Out of Stock',
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
                         color: totalStock > 0 ? Colors.grey[700] : Colors.red,
@@ -266,7 +296,10 @@ class _NewOrderTabState extends State<NewOrderTab> {
                   },
                 ),
                 const SizedBox(height: 16),
-                const Text('Quick Bulk Selection:', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                const Text(
+                  'Quick Bulk Selection:',
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                ),
                 const SizedBox(height: 8),
                 Wrap(
                   spacing: 8,
@@ -281,7 +314,9 @@ class _NewOrderTabState extends State<NewOrderTab> {
                           qtyController.text = '$totalStock';
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
-                              content: Text('Selected preset exceeds available stock. Capped to $totalStock units.'),
+                              content: Text(
+                                'Selected preset exceeds available stock. Capped to $totalStock units.',
+                              ),
                               duration: const Duration(seconds: 2),
                             ),
                           );
@@ -298,22 +333,35 @@ class _NewOrderTabState extends State<NewOrderTab> {
           actions: [
             TextButton(
               onPressed: () {
-                context.read<WarehouseController>().updateCartItem(product.id, 0);
+                context.read<WarehouseController>().updateCartItem(
+                  product.id,
+                  0,
+                );
                 setState(() {});
                 Navigator.pop(context);
               },
-              child: const Text('Remove from Cart', style: TextStyle(color: Colors.red)),
+              child: const Text(
+                'Remove from Cart',
+                style: TextStyle(color: Colors.red),
+              ),
             ),
             ElevatedButton(
               onPressed: () {
                 if (inputFormKey.currentState!.validate()) {
                   final newQty = int.tryParse(qtyController.text.trim()) ?? 0;
-                  final success = context.read<WarehouseController>().updateCartItem(product.id, newQty);
+                  final success = context
+                      .read<WarehouseController>()
+                      .updateCartItem(product.id, newQty);
                   if (!success) {
-                    final errorMsg = context.read<WarehouseController>().errorMessage;
+                    final errorMsg = context
+                        .read<WarehouseController>()
+                        .errorMessage;
                     if (errorMsg != null) {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text(errorMsg), backgroundColor: Colors.redAccent),
+                        SnackBar(
+                          content: Text(errorMsg),
+                          backgroundColor: Colors.redAccent,
+                        ),
                       );
                     }
                   }
@@ -338,7 +386,9 @@ class _NewOrderTabState extends State<NewOrderTab> {
 
     if (cart.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Your cart is empty. Add products first.')),
+        const SnackBar(
+          content: Text('Your cart is empty. Add products first.'),
+        ),
       );
       return;
     }
@@ -364,7 +414,9 @@ class _NewOrderTabState extends State<NewOrderTab> {
             return Container(
               decoration: BoxDecoration(
                 color: theme.scaffoldBackgroundColor,
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(24),
+                ),
               ),
               padding: EdgeInsets.only(
                 top: 24,
@@ -381,7 +433,9 @@ class _NewOrderTabState extends State<NewOrderTab> {
                     children: [
                       Text(
                         'Review Wholesale Order',
-                        style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+                        style: theme.textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                       IconButton(
                         icon: const Icon(Icons.close_rounded),
@@ -390,12 +444,20 @@ class _NewOrderTabState extends State<NewOrderTab> {
                     ],
                   ),
                   const SizedBox(height: 4),
-                  Text('Customer: $customerName', style: TextStyle(color: theme.primaryColor, fontWeight: FontWeight.bold)),
+                  Text(
+                    'Customer: $customerName',
+                    style: TextStyle(
+                      color: theme.primaryColor,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                   const Divider(height: 24),
                   if (cartItems.isEmpty)
                     const SizedBox(
                       height: 150,
-                      child: Center(child: Text('All items removed from cart.')),
+                      child: Center(
+                        child: Text('All items removed from cart.'),
+                      ),
                     )
                   else ...[
                     ConstrainedBox(
@@ -405,12 +467,20 @@ class _NewOrderTabState extends State<NewOrderTab> {
                       child: ListView.separated(
                         shrinkWrap: true,
                         itemCount: cartItems.length,
-                        separatorBuilder: (context, index) => const Divider(height: 1),
+                        separatorBuilder: (context, index) =>
+                            const Divider(height: 1),
                         itemBuilder: (context, index) {
                           final entry = cartItems[index];
-                          final product = products.firstWhere((p) => p.id == entry.key);
+                          final product = products.firstWhere(
+                            (p) => p.id == entry.key,
+                          );
                           final totalStock = batches
-                              .where((b) => b.productId == product.id && b.quantity > 0 && !b.isExpired)
+                              .where(
+                                (b) =>
+                                    b.productId == product.id &&
+                                    b.quantity > 0 &&
+                                    !b.isExpired,
+                              )
                               .fold(0, (sum, b) => sum + b.quantity);
 
                           return Padding(
@@ -419,63 +489,109 @@ class _NewOrderTabState extends State<NewOrderTab> {
                               children: [
                                 Expanded(
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
-                                      Text(product.name, style: const TextStyle(fontWeight: FontWeight.bold)),
-                                      Text('Price: Ks ${NumberFormat('#,###').format(product.price)} each'),
+                                      Text(
+                                        product.name,
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                      Text(
+                                        'Price: Ks ${NumberFormat('#,###').format(product.price)} each',
+                                      ),
                                     ],
                                   ),
                                 ),
                                 Row(
                                   children: [
                                     IconButton(
-                                      icon: const Icon(Icons.remove_circle_outline_rounded, color: Colors.grey),
+                                      icon: const Icon(
+                                        Icons.remove_circle_outline_rounded,
+                                        color: Colors.grey,
+                                      ),
                                       onPressed: () {
-                                        warehouseController.updateCartItem(product.id, entry.value - 1);
+                                        warehouseController.updateCartItem(
+                                          product.id,
+                                          entry.value - 1,
+                                        );
                                         setSheetState(() {});
                                         setState(() {});
                                       },
                                     ),
                                     InkWell(
                                       onTap: () {
-                                        _showQuantityInputDialog(product, entry.value, totalStock);
+                                        _showQuantityInputDialog(
+                                          product,
+                                          entry.value,
+                                          totalStock,
+                                        );
                                         setSheetState(() {});
                                       },
                                       child: Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 8,
+                                          vertical: 4,
+                                        ),
                                         decoration: BoxDecoration(
-                                          color: theme.primaryColor.withValues(alpha: 0.1),
-                                          borderRadius: BorderRadius.circular(6),
+                                          color: theme.primaryColor.withValues(
+                                            alpha: 0.1,
+                                          ),
+                                          borderRadius: BorderRadius.circular(
+                                            6,
+                                          ),
                                         ),
                                         child: Text(
                                           '${entry.value} pcs',
-                                          style: TextStyle(fontWeight: FontWeight.bold, color: theme.primaryColor),
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            color: theme.primaryColor,
+                                          ),
                                         ),
                                       ),
                                     ),
-                                     IconButton(
-                                       icon: Icon(
-                                         Icons.add_circle_outline_rounded,
-                                         color: (totalStock > 0 && entry.value < totalStock) ? theme.primaryColor : Colors.grey,
-                                       ),
-                                       onPressed: () {
-                                         if (entry.value >= totalStock) {
-                                           ScaffoldMessenger.of(context).showSnackBar(
-                                             SnackBar(content: Text('Maximum available stock ($totalStock units) reached.'), duration: const Duration(seconds: 2)),
-                                           );
-                                           return;
-                                         }
-                                         warehouseController.updateCartItem(product.id, entry.value + 1);
-                                         setSheetState(() {});
-                                         setState(() {});
-                                       },
-                                     ),
+                                    IconButton(
+                                      icon: Icon(
+                                        Icons.add_circle_outline_rounded,
+                                        color:
+                                            (totalStock > 0 &&
+                                                entry.value < totalStock)
+                                            ? theme.primaryColor
+                                            : Colors.grey,
+                                      ),
+                                      onPressed: () {
+                                        if (entry.value >= totalStock) {
+                                          ScaffoldMessenger.of(
+                                            context,
+                                          ).showSnackBar(
+                                            SnackBar(
+                                              content: Text(
+                                                'Maximum available stock ($totalStock units) reached.',
+                                              ),
+                                              duration: const Duration(
+                                                seconds: 2,
+                                              ),
+                                            ),
+                                          );
+                                          return;
+                                        }
+                                        warehouseController.updateCartItem(
+                                          product.id,
+                                          entry.value + 1,
+                                        );
+                                        setSheetState(() {});
+                                        setState(() {});
+                                      },
+                                    ),
                                   ],
                                 ),
                                 const SizedBox(width: 12),
                                 Text(
                                   'Ks ${NumberFormat('#,###').format(entry.value * product.price)}',
-                                  style: const TextStyle(fontWeight: FontWeight.bold),
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                  ),
                                 ),
                               ],
                             ),
@@ -487,7 +603,13 @@ class _NewOrderTabState extends State<NewOrderTab> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Text('Grand Total', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                        const Text(
+                          'Grand Total',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                          ),
+                        ),
                         Text(
                           'Ks ${NumberFormat('#,###').format(grandTotal)}',
                           style: theme.textTheme.titleLarge?.copyWith(
@@ -507,11 +629,13 @@ class _NewOrderTabState extends State<NewOrderTab> {
                         onPressed: warehouseController.isLoading
                             ? null
                             : () async {
-                                final success = await warehouseController.submitOrder(
-                                  customerName: customerName,
-                                  customerId: _selectedCustomer?.id,
-                                  salesStaffId: authController.profile?.id ?? '',
-                                );
+                                final success = await warehouseController
+                                    .submitOrder(
+                                      customerName: customerName,
+                                      customerId: _selectedCustomer?.id,
+                                      salesStaffId:
+                                          authController.profile?.id ?? '',
+                                    );
 
                                 if (success && mounted) {
                                   Navigator.pop(context);
@@ -520,22 +644,34 @@ class _NewOrderTabState extends State<NewOrderTab> {
                                   });
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     const SnackBar(
-                                      content: Text('Wholesale order submitted successfully!'),
+                                      content: Text(
+                                        'Wholesale order submitted successfully!',
+                                      ),
                                       backgroundColor: Colors.green,
                                     ),
                                   );
                                 } else if (mounted) {
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     SnackBar(
-                                      content: Text(warehouseController.errorMessage ?? 'Failed to submit order.'),
+                                      content: Text(
+                                        warehouseController.errorMessage ??
+                                            'Failed to submit order.',
+                                      ),
                                       backgroundColor: Colors.redAccent,
                                     ),
                                   );
                                 }
                               },
                         child: warehouseController.isLoading
-                            ? const CircularProgressIndicator(valueColor: AlwaysStoppedAnimation(Colors.white))
-                            : const Text('Submit Wholesale Order', style: TextStyle(fontSize: 16)),
+                            ? const CircularProgressIndicator(
+                                valueColor: AlwaysStoppedAnimation(
+                                  Colors.white,
+                                ),
+                              )
+                            : const Text(
+                                'Submit Wholesale Order',
+                                style: TextStyle(fontSize: 16),
+                              ),
                       ),
                     ),
                   ],
@@ -578,11 +714,20 @@ class _NewOrderTabState extends State<NewOrderTab> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Text('Customer / Shop Store', style: TextStyle(fontWeight: FontWeight.bold)),
+                        const Text(
+                          'Customer / Shop Store',
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
                         TextButton.icon(
                           onPressed: _showRegisterShopDialog,
-                          icon: const Icon(Icons.add_location_alt_outlined, size: 18),
-                          label: const Text('+ Register New Shop', style: TextStyle(fontSize: 12)),
+                          icon: const Icon(
+                            Icons.add_location_alt_outlined,
+                            size: 18,
+                          ),
+                          label: const Text(
+                            '+ Register New Shop',
+                            style: TextStyle(fontSize: 12),
+                          ),
                         ),
                       ],
                     ),
@@ -590,14 +735,21 @@ class _NewOrderTabState extends State<NewOrderTab> {
                     Builder(
                       builder: (context) {
                         Customer? dropdownValue;
-                        if (_selectedCustomer != null && approvedCustomers.any((c) => c.id == _selectedCustomer!.id)) {
-                          dropdownValue = approvedCustomers.firstWhere((c) => c.id == _selectedCustomer!.id);
+                        if (_selectedCustomer != null &&
+                            approvedCustomers.any(
+                              (c) => c.id == _selectedCustomer!.id,
+                            )) {
+                          dropdownValue = approvedCustomers.firstWhere(
+                            (c) => c.id == _selectedCustomer!.id,
+                          );
                         }
 
                         return DropdownButtonFormField<Customer>(
                           value: dropdownValue,
                           isExpanded: true,
-                          hint: const Text('Select Approved Master Customer Store...'),
+                          hint: const Text(
+                            'Select Approved Master Customer Store...',
+                          ),
                           validator: (v) {
                             if (v == null) {
                               return 'Please select an approved customer store';
@@ -610,7 +762,9 @@ class _NewOrderTabState extends State<NewOrderTab> {
                               child: Text(
                                 '${customer.name} (${customer.township}, ${customer.region})',
                                 overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(fontWeight: FontWeight.w600),
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                ),
                               ),
                             );
                           }).toList(),
@@ -651,12 +805,18 @@ class _NewOrderTabState extends State<NewOrderTab> {
                   ? const Center(child: Text('No products available.'))
                   : ListView.separated(
                       itemCount: filteredProducts.length,
-                      separatorBuilder: (context, index) => const SizedBox(height: 10),
+                      separatorBuilder: (context, index) =>
+                          const SizedBox(height: 10),
                       itemBuilder: (context, index) {
                         final product = filteredProducts[index];
                         final qty = cart[product.id] ?? 0;
                         final totalStock = batches
-                            .where((b) => b.productId == product.id && b.quantity > 0 && !b.isExpired)
+                            .where(
+                              (b) =>
+                                  b.productId == product.id &&
+                                  b.quantity > 0 &&
+                                  !b.isExpired,
+                            )
                             .fold(0, (sum, b) => sum + b.quantity);
 
                         return Card(
@@ -666,40 +826,81 @@ class _NewOrderTabState extends State<NewOrderTab> {
                             child: Row(
                               children: [
                                 CircleAvatar(
-                                  backgroundColor: theme.primaryColor.withValues(alpha: 0.1),
-                                  child: Icon(Icons.cookie_outlined, color: theme.primaryColor),
+                                  backgroundColor: theme.primaryColor
+                                      .withValues(alpha: 0.1),
+                                  child: Icon(
+                                    Icons.cookie_outlined,
+                                    color: theme.primaryColor,
+                                  ),
                                 ),
                                 const SizedBox(width: 16),
                                 Expanded(
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
-                                      Text(product.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
-                                      Text('SKU: ${product.sku}', style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                                      Text(
+                                        product.name,
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 15,
+                                        ),
+                                      ),
+                                      Text(
+                                        'SKU: ${product.sku}',
+                                        style: const TextStyle(
+                                          fontSize: 12,
+                                          color: Colors.grey,
+                                        ),
+                                      ),
                                       const SizedBox(height: 6),
                                       Wrap(
-                                        crossAxisAlignment: WrapCrossAlignment.center,
+                                        crossAxisAlignment:
+                                            WrapCrossAlignment.center,
                                         spacing: 8,
                                         children: [
                                           Text(
                                             'Ks ${NumberFormat('#,###').format(product.price)}',
-                                            style: TextStyle(fontWeight: FontWeight.bold, color: theme.primaryColor),
+                                            style: TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                              color: theme.primaryColor,
+                                            ),
                                           ),
                                           Container(
-                                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 6,
+                                              vertical: 2,
+                                            ),
                                             decoration: BoxDecoration(
-                                              color: totalStock > 0 ? Colors.green.withValues(alpha: 0.1) : Colors.red.withValues(alpha: 0.1),
-                                              borderRadius: BorderRadius.circular(4),
+                                              color: totalStock > 0
+                                                  ? Colors.green.withValues(
+                                                      alpha: 0.1,
+                                                    )
+                                                  : Colors.red.withValues(
+                                                      alpha: 0.1,
+                                                    ),
+                                              borderRadius:
+                                                  BorderRadius.circular(4),
                                               border: Border.all(
-                                                color: totalStock > 0 ? Colors.green.withValues(alpha: 0.3) : Colors.red.withValues(alpha: 0.3),
+                                                color: totalStock > 0
+                                                    ? Colors.green.withValues(
+                                                        alpha: 0.3,
+                                                      )
+                                                    : Colors.red.withValues(
+                                                        alpha: 0.3,
+                                                      ),
                                               ),
                                             ),
                                             child: Text(
-                                              totalStock > 0 ? 'Stock: $totalStock' : 'Out of Stock',
+                                              totalStock > 0
+                                                  ? 'Stock: $totalStock'
+                                                  : 'Out of Stock',
                                               style: TextStyle(
                                                 fontSize: 11,
                                                 fontWeight: FontWeight.bold,
-                                                color: totalStock > 0 ? Colors.green[800] : Colors.red[800],
+                                                color: totalStock > 0
+                                                    ? Colors.green[800]
+                                                    : Colors.red[800],
                                               ),
                                             ),
                                           ),
@@ -716,46 +917,87 @@ class _NewOrderTabState extends State<NewOrderTab> {
                                       children: [
                                         if (qty > 0) ...[
                                           IconButton(
-                                            icon: const Icon(Icons.remove_circle_outline_rounded, color: Colors.grey),
+                                            icon: const Icon(
+                                              Icons
+                                                  .remove_circle_outline_rounded,
+                                              color: Colors.grey,
+                                            ),
                                             onPressed: () {
-                                              warehouseController.updateCartItem(product.id, qty - 1);
+                                              warehouseController
+                                                  .updateCartItem(
+                                                    product.id,
+                                                    qty - 1,
+                                                  );
                                               setState(() {});
                                             },
                                           ),
                                         ],
                                         InkWell(
-                                          onTap: () => _showQuantityInputDialog(product, qty, totalStock),
-                                          borderRadius: BorderRadius.circular(8),
+                                          onTap: () => _showQuantityInputDialog(
+                                            product,
+                                            qty,
+                                            totalStock,
+                                          ),
+                                          borderRadius: BorderRadius.circular(
+                                            8,
+                                          ),
                                           child: Container(
-                                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 10,
+                                              vertical: 6,
+                                            ),
                                             decoration: BoxDecoration(
-                                              color: qty > 0 ? theme.primaryColor.withValues(alpha: 0.1) : Colors.grey.withValues(alpha: 0.1),
-                                              borderRadius: BorderRadius.circular(8),
+                                              color: qty > 0
+                                                  ? theme.primaryColor
+                                                        .withValues(alpha: 0.1)
+                                                  : Colors.grey.withValues(
+                                                      alpha: 0.1,
+                                                    ),
+                                              borderRadius:
+                                                  BorderRadius.circular(8),
                                               border: Border.all(
-                                                color: qty > 0 ? theme.primaryColor : Colors.grey.shade300,
+                                                color: qty > 0
+                                                    ? theme.primaryColor
+                                                    : Colors.grey.shade300,
                                               ),
                                             ),
                                             child: Row(
                                               mainAxisSize: MainAxisSize.min,
                                               children: [
                                                 Text(
-                                                  qty > 0 ? '$qty pcs' : '+ Add',
+                                                  qty > 0
+                                                      ? '$qty pcs'
+                                                      : '+ Add',
                                                   style: TextStyle(
                                                     fontWeight: FontWeight.bold,
                                                     fontSize: 14,
-                                                    color: qty > 0 ? theme.primaryColor : Colors.grey[700],
+                                                    color: qty > 0
+                                                        ? theme.primaryColor
+                                                        : Colors.grey[700],
                                                   ),
                                                 ),
                                                 const SizedBox(width: 4),
-                                                Icon(Icons.edit_rounded, size: 14, color: qty > 0 ? theme.primaryColor : Colors.grey[600]),
+                                                Icon(
+                                                  Icons.edit_rounded,
+                                                  size: 14,
+                                                  color: qty > 0
+                                                      ? theme.primaryColor
+                                                      : Colors.grey[600],
+                                                ),
                                               ],
                                             ),
                                           ),
                                         ),
                                         IconButton(
-                                          icon: Icon(Icons.add_circle_outline_rounded, color: theme.primaryColor),
+                                          icon: Icon(
+                                            Icons.add_circle_outline_rounded,
+                                            color: theme.primaryColor,
+                                          ),
                                           onPressed: () {
-                                            warehouseController.updateCartItem(product.id, qty + 1);
+                                            warehouseController.updateCartItem(
+                                              product.id,
+                                              qty + 1,
+                                            );
                                             setState(() {});
                                           },
                                         ),
@@ -766,25 +1008,49 @@ class _NewOrderTabState extends State<NewOrderTab> {
                                     Wrap(
                                       spacing: 4,
                                       children: [10, 50, 100].map((addAmount) {
+                                        final canAdd = totalStock > 0 && qty < totalStock;
                                         return InkWell(
                                           onTap: () {
-                                            warehouseController.updateCartItem(product.id, qty + addAmount);
+                                            warehouseController.updateCartItem(
+                                              product.id,
+                                              qty + addAmount,
+                                            );
                                             setState(() {});
                                           },
-                                          borderRadius: BorderRadius.circular(12),
+                                          borderRadius: BorderRadius.circular(
+                                            12,
+                                          ),
                                           child: Container(
-                                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 6,
+                                              vertical: 2,
+                                            ),
                                             decoration: BoxDecoration(
-                                              color: canAdd ? Colors.orange.withValues(alpha: 0.1) : Colors.grey.withValues(alpha: 0.1),
-                                              borderRadius: BorderRadius.circular(12),
-                                              border: Border.all(color: canAdd ? Colors.orange.withValues(alpha: 0.3) : Colors.grey.shade300),
+                                              color: canAdd
+                                                  ? Colors.orange.withValues(
+                                                      alpha: 0.1,
+                                                    )
+                                                  : Colors.grey.withValues(
+                                                      alpha: 0.1,
+                                                    ),
+                                              borderRadius:
+                                                  BorderRadius.circular(12),
+                                              border: Border.all(
+                                                color: canAdd
+                                                    ? Colors.orange.withValues(
+                                                        alpha: 0.3,
+                                                      )
+                                                    : Colors.grey.shade300,
+                                              ),
                                             ),
                                             child: Text(
                                               '+$addAmount',
                                               style: TextStyle(
                                                 fontSize: 10,
                                                 fontWeight: FontWeight.bold,
-                                                color: canAdd ? Colors.orange[900] : Colors.grey,
+                                                color: canAdd
+                                                    ? Colors.orange[900]
+                                                    : Colors.grey,
                                               ),
                                             ),
                                           ),
@@ -792,6 +1058,7 @@ class _NewOrderTabState extends State<NewOrderTab> {
                                       }).toList(),
                                     ),
                                   ],
+                                ),
                               ],
                             ),
                           ),
