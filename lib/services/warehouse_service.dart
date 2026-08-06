@@ -5,6 +5,8 @@ import '../models/order.dart';
 import '../models/disposal.dart';
 import '../models/physical_audit.dart';
 import '../models/customer.dart';
+import 'offline_storage_service.dart';
+import 'offline_sync_service.dart';
 
 abstract class WarehouseService {
   Future<List<Product>> fetchProducts();
@@ -68,11 +70,23 @@ class SupabaseWarehouseService implements WarehouseService {
 
   @override
   Future<List<Product>> fetchProducts() async {
-    final response = await _client
-        .from('products')
-        .select()
-        .order('name', ascending: true);
-    return (response as List).map((json) => Product.fromJson(json)).toList();
+    try {
+      if (OfflineSyncService.instance.isOfflineMode) {
+        final cached = await OfflineStorageService.instance.loadProductsCache();
+        if (cached.isNotEmpty) return cached;
+      }
+      final response = await _client
+          .from('products')
+          .select()
+          .order('name', ascending: true);
+      final products = (response as List).map((json) => Product.fromJson(json)).toList();
+      await OfflineStorageService.instance.saveProductsCache(products);
+      return products;
+    } catch (e) {
+      final cached = await OfflineStorageService.instance.loadProductsCache();
+      if (cached.isNotEmpty) return cached;
+      rethrow;
+    }
   }
 
   @override
@@ -255,35 +269,54 @@ class SupabaseWarehouseService implements WarehouseService {
     required String salesStaffId,
     required List<OrderItem> items,
   }) async {
-    // Insert order header
-    final orderResponse = await _client.from('orders').insert({
-      'customer_name': customerName,
-      'customer_id': customerId,
-      'status': 'pending',
-      'sales_staff_id': salesStaffId,
-    }).select().single();
+    if (OfflineSyncService.instance.isOfflineMode) {
+      return OfflineSyncService.instance.enqueueOfflineOrder(
+        customerName: customerName,
+        customerId: customerId,
+        salesStaffId: salesStaffId,
+        items: items,
+      );
+    }
 
-    final orderId = orderResponse['id'] as String;
+    try {
+      // Insert order header
+      final orderResponse = await _client.from('orders').insert({
+        'customer_name': customerName,
+        'customer_id': customerId,
+        'status': 'pending',
+        'sales_staff_id': salesStaffId,
+      }).select().single();
 
-    // Insert order items
-    final List<Map<String, dynamic>> itemsJson = items.map((item) => {
-      'order_id': orderId,
-      'product_id': item.productId,
-      'quantity': item.quantity,
-      'product_name': item.productName,
-      'product_price': item.productPrice,
-    }).toList();
+      final orderId = orderResponse['id'] as String;
 
-    await _client.from('order_items').insert(itemsJson);
+      // Insert order items
+      final List<Map<String, dynamic>> itemsJson = items.map((item) => {
+        'order_id': orderId,
+        'product_id': item.productId,
+        'quantity': item.quantity,
+        'product_name': item.productName,
+        'product_price': item.productPrice,
+      }).toList();
 
-    // Fetch full order
-    final response = await _client
-        .from('orders')
-        .select('*, order_items(*)')
-        .eq('id', orderId)
-        .single();
-        
-    return Order.fromJson(response);
+      await _client.from('order_items').insert(itemsJson);
+
+      // Fetch full order
+      final response = await _client
+          .from('orders')
+          .select('*, order_items(*)')
+          .eq('id', orderId)
+          .single();
+          
+      return Order.fromJson(response);
+    } catch (e) {
+      // Fallback to offline queue if network request fails
+      return OfflineSyncService.instance.enqueueOfflineOrder(
+        customerName: customerName,
+        customerId: customerId,
+        salesStaffId: salesStaffId,
+        items: items,
+      );
+    }
   }
 
   @override
@@ -302,11 +335,23 @@ class SupabaseWarehouseService implements WarehouseService {
 
   @override
   Future<List<Customer>> fetchCustomers() async {
-    final response = await _client
-        .from('customers')
-        .select()
-        .order('name', ascending: true);
-    return (response as List).map((json) => Customer.fromJson(json)).toList();
+    try {
+      if (OfflineSyncService.instance.isOfflineMode) {
+        final cached = await OfflineStorageService.instance.loadCustomersCache();
+        if (cached.isNotEmpty) return cached;
+      }
+      final response = await _client
+          .from('customers')
+          .select()
+          .order('name', ascending: true);
+      final customers = (response as List).map((json) => Customer.fromJson(json)).toList();
+      await OfflineStorageService.instance.saveCustomersCache(customers);
+      return customers;
+    } catch (e) {
+      final cached = await OfflineStorageService.instance.loadCustomersCache();
+      if (cached.isNotEmpty) return cached;
+      rethrow;
+    }
   }
 
   @override

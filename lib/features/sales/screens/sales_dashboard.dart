@@ -35,7 +35,6 @@ class _SalesDashboardState extends State<SalesDashboard> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final userProfile = context.watch<AuthController>().profile;
     final warehouseController = context.watch<WarehouseController>();
 
     return Scaffold(
@@ -52,6 +51,27 @@ class _SalesDashboardState extends State<SalesDashboard> {
         ),
         backgroundColor: theme.primaryColor,
         actions: [
+          // Connection Toggle Button
+          IconButton(
+            onPressed: () {
+              final newMode = !warehouseController.isOffline;
+              warehouseController.toggleOfflineMode(newMode);
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(newMode
+                      ? '⚡ Switched to Offline Mode (Using Local Database)'
+                      : '🌐 Connected to Supabase Cloud Online'),
+                  backgroundColor: newMode ? Colors.amber[800] : Colors.green[700],
+                  duration: const Duration(seconds: 2),
+                ),
+              );
+            },
+            icon: Icon(
+              warehouseController.isOffline ? Icons.wifi_off_rounded : Icons.wifi_rounded,
+              color: warehouseController.isOffline ? Colors.amber[300] : Colors.white,
+            ),
+            tooltip: warehouseController.isOffline ? 'Offline Mode (Local DB)' : 'Online Mode (Supabase)',
+          ),
           IconButton(
             onPressed: () => warehouseController.loadAllWarehouseData(),
             icon: const Icon(Icons.refresh_rounded, color: Colors.white),
@@ -64,12 +84,65 @@ class _SalesDashboardState extends State<SalesDashboard> {
           ),
         ],
       ),
-      body: warehouseController.isLoading && warehouseController.products.isEmpty
-          ? const Center(child: CircularProgressIndicator())
-          : Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-              child: _tabs[_selectedIndex],
+      body: Column(
+        children: [
+          // Offline Mode Banner
+          if (warehouseController.isOffline || warehouseController.pendingSyncCount > 0)
+            Container(
+              color: warehouseController.isOffline ? Colors.amber[800] : Colors.blue[700],
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: Row(
+                children: [
+                  Icon(
+                    warehouseController.isOffline ? Icons.wifi_off_rounded : Icons.sync_rounded,
+                    color: Colors.white,
+                    size: 20,
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      warehouseController.isOffline
+                          ? 'Offline Mode Active (${warehouseController.pendingSyncCount} orders queued for sync)'
+                          : '${warehouseController.pendingSyncCount} pending offline orders ready to sync',
+                      style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                  if (warehouseController.pendingSyncCount > 0)
+                    ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.white,
+                        foregroundColor: Colors.black87,
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                        minimumSize: Size.zero,
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      ),
+                      onPressed: () async {
+                        final synced = await warehouseController.syncOfflineOrders();
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('✅ Successfully synced $synced pending orders to Supabase Cloud!'),
+                              backgroundColor: Colors.green[800],
+                            ),
+                          );
+                        }
+                      },
+                      icon: const Icon(Icons.cloud_upload_rounded, size: 14),
+                      label: const Text('Sync Now', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                    ),
+                ],
+              ),
             ),
+          Expanded(
+            child: warehouseController.isLoading && warehouseController.products.isEmpty
+                ? const Center(child: CircularProgressIndicator())
+                : Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                    child: _tabs[_selectedIndex],
+                  ),
+          ),
+        ],
+      ),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _selectedIndex,
         type: BottomNavigationBarType.fixed,

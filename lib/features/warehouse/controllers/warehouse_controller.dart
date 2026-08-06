@@ -7,6 +7,7 @@ import '../../../models/physical_audit.dart';
 import '../../../models/customer.dart';
 import '../../../services/warehouse_service.dart';
 import '../../../services/admin_service.dart';
+import '../../../services/offline_sync_service.dart';
 
 class WarehouseController extends ChangeNotifier {
   final WarehouseService _service;
@@ -25,7 +26,15 @@ class WarehouseController extends ChangeNotifier {
   bool _isLoading = false;
   String? _errorMessage;
 
-  WarehouseController(this._service, [this._adminService]);
+  WarehouseController(this._service, [this._adminService]) {
+    OfflineSyncService.instance.addListener(notifyListeners);
+  }
+
+  @override
+  void dispose() {
+    OfflineSyncService.instance.removeListener(notifyListeners);
+    super.dispose();
+  }
 
   List<Product> get products => _products;
   List<StockBatch> get batches => _batches;
@@ -41,6 +50,20 @@ class WarehouseController extends ChangeNotifier {
 
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
+
+  bool get isOffline => OfflineSyncService.instance.isOfflineMode;
+  int get pendingSyncCount => OfflineSyncService.instance.pendingCount;
+
+  void toggleOfflineMode(bool enable) {
+    OfflineSyncService.instance.toggleOfflineMode(enable);
+    notifyListeners();
+  }
+
+  Future<int> syncOfflineOrders() async {
+    final count = await OfflineSyncService.instance.syncQueuedOrders(_service);
+    await loadAllWarehouseData();
+    return count;
+  }
 
   int getAvailableStock(String productId) {
     return _batches
