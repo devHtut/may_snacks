@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/product.dart';
 import '../models/batch.dart';
@@ -119,13 +120,26 @@ class SupabaseWarehouseService implements WarehouseService {
 
   @override
   Future<List<Order>> fetchIncomingOrders() async {
-    // Select all orders and pre-fetch order items and products
-    final response = await _client
-        .from('orders')
-        .select('*, order_items(*, products(*))')
-        .order('created_at', ascending: true);
-        
-    return (response as List).map((json) => Order.fromJson(json)).toList();
+    List<Order> orders = [];
+    try {
+      final response = await _client
+          .from('orders')
+          .select('*, order_items(*, products(*))')
+          .order('created_at', ascending: true);
+          
+      orders = (response as List).map((json) => Order.fromJson(json)).toList();
+    } catch (e) {
+      debugPrint('Fetch remote orders exception (offline): $e');
+    }
+
+    // Merge offline pending orders so Warehouse Manager & Sales Staff see queued offline orders immediately!
+    final pendingOfflineOrders = OfflineSyncService.instance.pendingQueue;
+    for (final offlineOrder in pendingOfflineOrders) {
+      if (!orders.any((o) => o.id == offlineOrder.id)) {
+        orders.insert(0, offlineOrder);
+      }
+    }
+    return orders;
   }
 
   @override
@@ -712,6 +726,16 @@ class MockWarehouseService implements WarehouseService {
     );
 
     _orders.add(newOrder);
+
+    if (OfflineSyncService.instance.isOfflineMode) {
+      await OfflineSyncService.instance.enqueueOfflineOrder(
+        customerName: customerName,
+        customerId: customerId,
+        salesStaffId: salesStaffId,
+        items: populatedItems,
+      );
+    }
+
     return newOrder;
   }
 

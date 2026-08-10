@@ -10,6 +10,7 @@ import 'tabs/disposal_approvals_tab.dart';
 import 'tabs/system_logs_tab.dart';
 import 'tabs/sales_analytics_tab.dart';
 import 'tabs/customer_management_tab.dart';
+import '../../../common/widgets/connection_status_badge.dart';
 
 class AdminDashboard extends StatefulWidget {
   const AdminDashboard({super.key});
@@ -61,6 +62,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
         ),
         backgroundColor: theme.primaryColor,
         actions: [
+          const ConnectionStatusBadge(),
           IconButton(
             onPressed: () {
               context.read<AdminController>().loadAllAdminData();

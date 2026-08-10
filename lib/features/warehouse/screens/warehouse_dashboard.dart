@@ -9,6 +9,7 @@ import 'tabs/expiry_tracking_tab.dart';
 import 'tabs/disposal_requests_tab.dart';
 import 'tabs/stock_audit_tab.dart';
 import 'tabs/order_history_tab.dart';
+import '../../../common/widgets/connection_status_badge.dart';
 
 class WarehouseDashboard extends StatefulWidget {
   const WarehouseDashboard({super.key});
@@ -59,6 +60,7 @@ class _WarehouseDashboardState extends State<WarehouseDashboard> {
         ),
         backgroundColor: theme.primaryColor,
         actions: [
+          const ConnectionStatusBadge(),
           IconButton(
             onPressed: () => context.read<WarehouseController>().loadAllWarehouseData(),
             icon: const Icon(Icons.refresh_rounded, color: Colors.white),

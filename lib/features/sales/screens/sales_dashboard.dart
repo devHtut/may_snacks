@@ -6,6 +6,7 @@ import 'tabs/new_order_tab.dart';
 import 'tabs/my_orders_tab.dart';
 import 'tabs/products_tab.dart';
 import 'tabs/expiry_monitor_tab.dart';
+import '../../../common/widgets/connection_status_badge.dart';
 
 class SalesDashboard extends StatefulWidget {
   const SalesDashboard({super.key});
@@ -51,27 +52,7 @@ class _SalesDashboardState extends State<SalesDashboard> {
         ),
         backgroundColor: theme.primaryColor,
         actions: [
-          // Connection Toggle Button
-          IconButton(
-            onPressed: () {
-              final newMode = !warehouseController.isOffline;
-              warehouseController.toggleOfflineMode(newMode);
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(newMode
-                      ? '⚡ Switched to Offline Mode (Using Local Database)'
-                      : '🌐 Connected to Supabase Cloud Online'),
-                  backgroundColor: newMode ? Colors.amber[800] : Colors.green[700],
-                  duration: const Duration(seconds: 2),
-                ),
-              );
-            },
-            icon: Icon(
-              warehouseController.isOffline ? Icons.wifi_off_rounded : Icons.wifi_rounded,
-              color: warehouseController.isOffline ? Colors.amber[300] : Colors.white,
-            ),
-            tooltip: warehouseController.isOffline ? 'Offline Mode (Local DB)' : 'Online Mode (Supabase)',
-          ),
+          const ConnectionStatusBadge(),
           IconButton(
             onPressed: () => warehouseController.loadAllWarehouseData(),
             icon: const Icon(Icons.refresh_rounded, color: Colors.white),
