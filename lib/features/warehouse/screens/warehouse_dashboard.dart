@@ -48,13 +48,21 @@ class _WarehouseDashboardState extends State<WarehouseDashboard> {
 
     return Scaffold(
       appBar: AppBar(
+        titleSpacing: 8,
         title: Row(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.warehouse_rounded, color: Colors.white),
-            const SizedBox(width: 10),
-            Text(
-              'Warehouse Panel (Inventory & Operations)',
-              style: theme.textTheme.titleLarge?.copyWith(color: Colors.white),
+            const Icon(Icons.warehouse_rounded, color: Colors.white, size: 20),
+            const SizedBox(width: 6),
+            Flexible(
+              child: Text(
+                'Warehouse Panel',
+                style: theme.textTheme.titleMedium?.copyWith(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                ),
+                overflow: TextOverflow.ellipsis,
+              ),
             ),
           ],
         ),
@@ -63,14 +71,20 @@ class _WarehouseDashboardState extends State<WarehouseDashboard> {
           const ConnectionStatusBadge(),
           IconButton(
             onPressed: () => context.read<WarehouseController>().loadAllWarehouseData(),
-            icon: const Icon(Icons.refresh_rounded, color: Colors.white),
+            icon: const Icon(Icons.refresh_rounded, color: Colors.white, size: 20),
             tooltip: 'Refresh All Data',
+            padding: const EdgeInsets.all(4),
+            constraints: const BoxConstraints(),
           ),
+          const SizedBox(width: 4),
           IconButton(
             onPressed: () => context.read<AuthController>().logout(),
-            icon: const Icon(Icons.logout_rounded, color: Colors.white),
+            icon: const Icon(Icons.logout_rounded, color: Colors.white, size: 20),
             tooltip: 'Logout',
+            padding: const EdgeInsets.all(4),
+            constraints: const BoxConstraints(),
           ),
+          const SizedBox(width: 8),
         ],
       ),
       body: Row(

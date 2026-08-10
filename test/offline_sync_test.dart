@@ -74,13 +74,12 @@ void main() {
         ],
       );
 
-      expect(OfflineSyncService.instance.pendingCount, greaterThanOrEqualTo(1));
+      expect(OfflineSyncService.instance.pendingCount, equals(1));
 
-      // Simulate coming back online & triggering background sync
-      OfflineSyncService.instance.setOnlineStatus(true, warehouseService: mockService);
+      // Trigger sync
       final synced = await OfflineSyncService.instance.syncQueuedOrders(mockService);
 
-      expect(synced, greaterThanOrEqualTo(1));
+      expect(synced, equals(1));
       expect(OfflineSyncService.instance.pendingCount, equals(0));
     });
   });

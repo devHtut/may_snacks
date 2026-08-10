@@ -22,21 +22,21 @@ class ConnectionStatusBadge extends StatelessWidget {
         if (isSyncing) {
           badgeColor = Colors.blue;
           badgeIcon = Icons.sync_rounded;
-          badgeText = 'Syncing ($pendingCount)...';
+          badgeText = pendingCount > 0 ? 'Syncing ($pendingCount)' : 'Syncing';
         } else if (!isOnline) {
           badgeColor = Colors.orange;
           badgeIcon = Icons.wifi_off_rounded;
-          badgeText = pendingCount > 0 ? 'Offline ($pendingCount pending)' : 'Offline (Local)';
+          badgeText = pendingCount > 0 ? 'Offline ($pendingCount)' : 'Offline';
         }
 
         return Tooltip(
           message: 'Network connection status (Automatically monitored by system)',
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-            margin: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            margin: const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
             decoration: BoxDecoration(
               color: badgeColor.withValues(alpha: 0.15),
-              borderRadius: BorderRadius.circular(20),
+              borderRadius: BorderRadius.circular(16),
               border: Border.all(color: badgeColor.withValues(alpha: 0.4)),
             ),
             child: Row(

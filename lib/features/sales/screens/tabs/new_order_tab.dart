@@ -714,19 +714,28 @@ class _NewOrderTabState extends State<NewOrderTab> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Text(
-                          'Customer / Shop Store',
-                          style: TextStyle(fontWeight: FontWeight.bold),
+                        const Flexible(
+                          child: Text(
+                            'Customer / Shop Store',
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                            overflow: TextOverflow.ellipsis,
+                          ),
                         ),
+                        const SizedBox(width: 4),
                         TextButton.icon(
                           onPressed: _showRegisterShopDialog,
+                          style: TextButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(horizontal: 4),
+                            minimumSize: Size.zero,
+                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          ),
                           icon: const Icon(
                             Icons.add_location_alt_outlined,
-                            size: 18,
+                            size: 16,
                           ),
                           label: const Text(
                             '+ Register New Shop',
-                            style: TextStyle(fontSize: 12),
+                            style: TextStyle(fontSize: 11),
                           ),
                         ),
                       ],
