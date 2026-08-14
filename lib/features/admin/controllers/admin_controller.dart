@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../common/utils/error_handler.dart';
 import '../../../models/profile.dart';
 import '../../../models/audit_log.dart';
 import '../../../services/admin_service.dart';
@@ -48,7 +49,7 @@ class AdminController extends ChangeNotifier {
       _auditLogs = results[1] as List<AuditLog>;
       _analytics = results[2] as Map<String, dynamic>;
     } catch (e) {
-      _errorMessage = e.toString().replaceAll('Exception: ', '');
+      _errorMessage = ErrorHandler.toUserFriendlyMessage(e);
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -62,7 +63,7 @@ class AdminController extends ChangeNotifier {
       final updatedAnalytics = await _adminService.fetchSalesAnalytics(duration: duration);
       _analytics = updatedAnalytics;
     } catch (e) {
-      _errorMessage = e.toString().replaceAll('Exception: ', '');
+      _errorMessage = ErrorHandler.toUserFriendlyMessage(e);
     } finally {
       notifyListeners();
     }
@@ -90,7 +91,7 @@ class AdminController extends ChangeNotifier {
       notifyListeners();
       return true;
     } catch (e) {
-      _errorMessage = e.toString().replaceAll('Exception: ', '');
+      _errorMessage = ErrorHandler.toUserFriendlyMessage(e);
       _isLoading = false;
       notifyListeners();
       return false;
@@ -114,7 +115,7 @@ class AdminController extends ChangeNotifier {
       notifyListeners();
       return true;
     } catch (e) {
-      _errorMessage = e.toString().replaceAll('Exception: ', '');
+      _errorMessage = ErrorHandler.toUserFriendlyMessage(e);
       _isLoading = false;
       notifyListeners();
       return false;
@@ -134,7 +135,7 @@ class AdminController extends ChangeNotifier {
       notifyListeners();
       return true;
     } catch (e) {
-      _errorMessage = e.toString().replaceAll('Exception: ', '');
+      _errorMessage = ErrorHandler.toUserFriendlyMessage(e);
       _isLoading = false;
       notifyListeners();
       return false;
@@ -152,7 +153,7 @@ class AdminController extends ChangeNotifier {
       await loadAllAdminData();
       return true;
     } catch (e) {
-      _errorMessage = e.toString().replaceAll('Exception: ', '');
+      _errorMessage = ErrorHandler.toUserFriendlyMessage(e);
       _isLoading = false;
       notifyListeners();
       return false;
@@ -170,7 +171,7 @@ class AdminController extends ChangeNotifier {
       await loadAllAdminData();
       return true;
     } catch (e) {
-      _errorMessage = e.toString().replaceAll('Exception: ', '');
+      _errorMessage = ErrorHandler.toUserFriendlyMessage(e);
       _isLoading = false;
       notifyListeners();
       return false;
@@ -196,7 +197,7 @@ class AdminController extends ChangeNotifier {
       notifyListeners();
       return true;
     } catch (e) {
-      _errorMessage = e.toString().replaceAll('Exception: ', '');
+      _errorMessage = ErrorHandler.toUserFriendlyMessage(e);
       _isLoading = false;
       notifyListeners();
       return false;

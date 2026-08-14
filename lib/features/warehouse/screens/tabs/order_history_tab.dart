@@ -99,7 +99,7 @@ class _OrderHistoryTabState extends State<OrderHistoryTab> {
     }
 
     // Sort: Newest first
-    filteredOrders.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    filteredOrders.sort((Order a, Order b) => b.createdAt.compareTo(a.createdAt));
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,

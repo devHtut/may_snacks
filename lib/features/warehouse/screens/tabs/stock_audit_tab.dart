@@ -64,7 +64,7 @@ class _StockAuditTabState extends State<StockAuditTab> {
                       const SizedBox(height: 6),
                       DropdownButtonFormField<Product>(
                         value: _selectedProduct,
-                        items: products.map((p) {
+                        items: products.map<DropdownMenuItem<Product>>((p) {
                           return DropdownMenuItem<Product>(value: p, child: Text(p.name));
                         }).toList(),
                         onChanged: (val) {

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../common/utils/error_handler.dart';
 import '../../../models/product.dart';
 import '../../../models/batch.dart';
 import '../../../models/order.dart';
@@ -7,11 +8,13 @@ import '../../../models/physical_audit.dart';
 import '../../../models/customer.dart';
 import '../../../services/warehouse_service.dart';
 import '../../../services/admin_service.dart';
-import '../../../services/offline_sync_service.dart';
+import '../../../database/database.dart' show LocalDatabase, AppDatabase;
+import '../../../services/sync_manager.dart';
 
 class WarehouseController extends ChangeNotifier {
   final WarehouseService _service;
   final AdminService? _adminService;
+  SyncManager? _syncManager;
 
   List<Product> _products = [];
   List<StockBatch> _batches = [];
@@ -26,13 +29,31 @@ class WarehouseController extends ChangeNotifier {
   bool _isLoading = false;
   String? _errorMessage;
 
+  int _pendingSyncCount = 0;
+  int get pendingSyncCount => _pendingSyncCount;
+
   WarehouseController(this._service, [this._adminService]) {
-    OfflineSyncService.instance.addListener(notifyListeners);
+    try {
+      _syncManager = LocalDatabase.syncManager;
+      _syncManager?.addListener(_onSyncChange);
+      _updatePendingCount();
+    } catch (_) {}
+  }
+
+  void _onSyncChange() {
+    _updatePendingCount();
+  }
+
+  Future<void> _updatePendingCount() async {
+    if (_syncManager != null) {
+      _pendingSyncCount = await _syncManager!.getPendingCount();
+      notifyListeners();
+    }
   }
 
   @override
   void dispose() {
-    OfflineSyncService.instance.removeListener(notifyListeners);
+    _syncManager?.removeListener(_onSyncChange);
     super.dispose();
   }
 
@@ -51,17 +72,13 @@ class WarehouseController extends ChangeNotifier {
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
 
-  bool get isOffline => OfflineSyncService.instance.isOfflineMode;
-  int get pendingSyncCount => OfflineSyncService.instance.pendingCount;
-
-  void toggleOfflineMode(bool enable) {
-    OfflineSyncService.instance.toggleOfflineMode(enable);
-    notifyListeners();
-  }
+  bool get isOffline => _syncManager?.isOffline ?? false;
 
   Future<int> syncOfflineOrders() async {
-    final count = await OfflineSyncService.instance.syncQueuedOrders(_service);
+    final count = await _syncManager?.getPendingCount() ?? 0;
+    await _syncManager?.processQueue();
     await loadAllWarehouseData();
+    await _updatePendingCount();
     return count;
   }
 
@@ -160,7 +177,7 @@ class WarehouseController extends ChangeNotifier {
       await loadAllWarehouseData();
       return true;
     } catch (e) {
-      _errorMessage = e.toString().replaceAll('Exception: ', '');
+      _errorMessage = ErrorHandler.toUserFriendlyMessage(e);
       _isLoading = false;
       notifyListeners();
       return false;
@@ -189,7 +206,7 @@ class WarehouseController extends ChangeNotifier {
       _audits = results[4] as List<PhysicalAudit>;
       _customers = results[5] as List<Customer>;
     } catch (e) {
-      _errorMessage = e.toString().replaceAll('Exception: ', '');
+      _errorMessage = ErrorHandler.toUserFriendlyMessage(e);
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -223,7 +240,7 @@ class WarehouseController extends ChangeNotifier {
       notifyListeners();
       return true;
     } catch (e) {
-      _errorMessage = e.toString().replaceAll('Exception: ', '');
+      _errorMessage = ErrorHandler.toUserFriendlyMessage(e);
       _isLoading = false;
       notifyListeners();
       return false;
@@ -253,7 +270,7 @@ class WarehouseController extends ChangeNotifier {
       notifyListeners();
       return true;
     } catch (e) {
-      _errorMessage = e.toString().replaceAll('Exception: ', '');
+      _errorMessage = ErrorHandler.toUserFriendlyMessage(e);
       _isLoading = false;
       notifyListeners();
       return false;
@@ -287,7 +304,7 @@ class WarehouseController extends ChangeNotifier {
       notifyListeners();
       return true;
     } catch (e) {
-      _errorMessage = e.toString().replaceAll('Exception: ', '');
+      _errorMessage = ErrorHandler.toUserFriendlyMessage(e);
       _isLoading = false;
       notifyListeners();
       return false;
@@ -328,7 +345,7 @@ class WarehouseController extends ChangeNotifier {
       notifyListeners();
       return true;
     } catch (e) {
-      _errorMessage = e.toString().replaceAll('Exception: ', '');
+      _errorMessage = ErrorHandler.toUserFriendlyMessage(e);
       _isLoading = false;
       notifyListeners();
       return false;
@@ -350,7 +367,7 @@ class WarehouseController extends ChangeNotifier {
       await loadAllWarehouseData();
       return true;
     } catch (e) {
-      _errorMessage = e.toString().replaceAll('Exception: ', '');
+      _errorMessage = ErrorHandler.toUserFriendlyMessage(e);
       _isLoading = false;
       notifyListeners();
       return false;
@@ -372,7 +389,7 @@ class WarehouseController extends ChangeNotifier {
       await loadAllWarehouseData();
       return true;
     } catch (e) {
-      _errorMessage = e.toString().replaceAll('Exception: ', '');
+      _errorMessage = ErrorHandler.toUserFriendlyMessage(e);
       _isLoading = false;
       notifyListeners();
       return false;
@@ -408,7 +425,7 @@ class WarehouseController extends ChangeNotifier {
       await loadAllWarehouseData();
       return true;
     } catch (e) {
-      _errorMessage = e.toString().replaceAll('Exception: ', '');
+      _errorMessage = ErrorHandler.toUserFriendlyMessage(e);
       _isLoading = false;
       notifyListeners();
       return false;
@@ -430,7 +447,7 @@ class WarehouseController extends ChangeNotifier {
       await loadAllWarehouseData();
       return true;
     } catch (e) {
-      _errorMessage = e.toString().replaceAll('Exception: ', '');
+      _errorMessage = ErrorHandler.toUserFriendlyMessage(e);
       _isLoading = false;
       notifyListeners();
       return false;
@@ -452,7 +469,7 @@ class WarehouseController extends ChangeNotifier {
       await loadAllWarehouseData();
       return true;
     } catch (e) {
-      _errorMessage = e.toString().replaceAll('Exception: ', '');
+      _errorMessage = ErrorHandler.toUserFriendlyMessage(e);
       _isLoading = false;
       notifyListeners();
       return false;
@@ -486,7 +503,7 @@ class WarehouseController extends ChangeNotifier {
       await loadAllWarehouseData();
       return true;
     } catch (e) {
-      _errorMessage = e.toString().replaceAll('Exception: ', '');
+      _errorMessage = ErrorHandler.toUserFriendlyMessage(e);
       _isLoading = false;
       notifyListeners();
       return false;
@@ -508,7 +525,7 @@ class WarehouseController extends ChangeNotifier {
       await loadAllWarehouseData();
       return true;
     } catch (e) {
-      _errorMessage = e.toString().replaceAll('Exception: ', '');
+      _errorMessage = ErrorHandler.toUserFriendlyMessage(e);
       _isLoading = false;
       notifyListeners();
       return false;

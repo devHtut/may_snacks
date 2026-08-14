@@ -143,7 +143,7 @@ class _StockInTabState extends State<StockInTab> {
                     const SizedBox(height: 8),
                     DropdownButtonFormField<Product>(
                       value: _selectedProduct,
-                      items: products.map((product) {
+                      items: products.map<DropdownMenuItem<Product>>((product) {
                         return DropdownMenuItem<Product>(
                           value: product,
                           child: Text(product.name),
