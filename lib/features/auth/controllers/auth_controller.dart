@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import '../../../common/utils/error_handler.dart';
 import '../../../models/profile.dart';
 import '../../../services/auth_service.dart';
 
@@ -8,12 +9,14 @@ class AuthController extends ChangeNotifier {
   
   UserProfile? _profile;
   bool _isLoading = false;
+  bool _isInitializing = true;
   String? _errorMessage;
   StreamSubscription<UserProfile?>? _profileSubscription;
 
   UserProfile? get profile => _profile;
   bool get isAuthenticated => _profile != null;
   bool get isLoading => _isLoading;
+  bool get isInitializing => _isInitializing;
   String? get errorMessage => _errorMessage;
   
   // Convenient checks
@@ -24,7 +27,18 @@ class AuthController extends ChangeNotifier {
     _profile = _authService.currentUserProfile;
     _profileSubscription = _authService.onProfileChanged.listen((profile) {
       _profile = profile;
+      _isInitializing = false;
       notifyListeners();
+    });
+
+    // Gracefully finish initialization if auth state listener doesn't trigger immediately
+    Future.microtask(() async {
+      await Future.delayed(const Duration(milliseconds: 300));
+      if (_isInitializing) {
+        _profile = _authService.currentUserProfile;
+        _isInitializing = false;
+        notifyListeners();
+      }
     });
   }
 
@@ -48,7 +62,7 @@ class AuthController extends ChangeNotifier {
       return userProfile != null;
     } catch (e) {
       _isLoading = false;
-      _errorMessage = e.toString().replaceAll('Exception: ', '');
+      _errorMessage = ErrorHandler.toUserFriendlyMessage(e);
       notifyListeners();
       return false;
     }
@@ -61,7 +75,7 @@ class AuthController extends ChangeNotifier {
       await _authService.signOut();
       _profile = null;
     } catch (e) {
-      _errorMessage = e.toString().replaceAll('Exception: ', '');
+      _errorMessage = ErrorHandler.toUserFriendlyMessage(e);
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -85,7 +99,7 @@ class AuthController extends ChangeNotifier {
       return true;
     } catch (e) {
       _isLoading = false;
-      _errorMessage = e.toString().replaceAll('Exception: ', '');
+      _errorMessage = ErrorHandler.toUserFriendlyMessage(e);
       notifyListeners();
       return false;
     }
@@ -107,7 +121,7 @@ class AuthController extends ChangeNotifier {
       return userId;
     } catch (e) {
       _isLoading = false;
-      _errorMessage = e.toString().replaceAll('Exception: ', '');
+      _errorMessage = ErrorHandler.toUserFriendlyMessage(e);
       notifyListeners();
       return null;
     }
@@ -124,7 +138,7 @@ class AuthController extends ChangeNotifier {
       return true;
     } catch (e) {
       _isLoading = false;
-      _errorMessage = e.toString().replaceAll('Exception: ', '');
+      _errorMessage = ErrorHandler.toUserFriendlyMessage(e);
       notifyListeners();
       return false;
     }
@@ -134,14 +148,24 @@ class AuthController extends ChangeNotifier {
     try {
       return await _authService.getAllProfiles();
     } catch (e) {
-      _errorMessage = e.toString().replaceAll('Exception: ', '');
+      _errorMessage = ErrorHandler.toUserFriendlyMessage(e);
       notifyListeners();
       return [];
     }
   }
 
+  bool _disposed = false;
+
+  @override
+  void notifyListeners() {
+    if (!_disposed) {
+      super.notifyListeners();
+    }
+  }
+
   @override
   void dispose() {
+    _disposed = true;
     _profileSubscription?.cancel();
     super.dispose();
   }

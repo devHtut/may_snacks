@@ -2,7 +2,9 @@ import 'dart:async';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../config/supabase_config.dart';
 import '../models/profile.dart';
-
+import 'dart:convert';
+import 'dart:io';
+import 'package:path_provider/path_provider.dart';
 abstract class AuthService {
   UserProfile? get currentUserProfile;
   Stream<UserProfile?> get onProfileChanged;
@@ -26,27 +28,51 @@ class SupabaseAuthService implements AuthService {
   StreamSubscription<AuthState>? _authSubscription;
 
   SupabaseAuthService() {
+    _initSession();
+
     // Listen for auth changes to load the profile automatically
     _authSubscription = _client.auth.onAuthStateChange.listen((data) async {
       final user = data.session?.user;
       if (user == null) {
+        await ProfileCache.clear();
         _updateProfile(null);
       } else {
         try {
           final profile = await getProfile(user.id);
-          _updateProfile(profile);
+          if (profile != null) {
+            await ProfileCache.save(profile);
+            _updateProfile(profile);
+          } else {
+            throw Exception('Profile not found');
+          }
         } catch (e) {
-          // If profile table hasn't updated yet, retry once or return minimal profile
-          _updateProfile(UserProfile(
-            id: user.id,
-            email: user.email ?? '',
-            role: UserRole.salesStaff,
-            displayName: user.userMetadata?['display_name'] ?? '',
-            requiresPasswordReset: true,
-          ));
+          // Check for offline cached profile first
+          final cachedProfile = await ProfileCache.load();
+          if (cachedProfile != null && cachedProfile.id == user.id) {
+            _updateProfile(cachedProfile);
+          } else {
+            // Fallback for missing profile cache when offline
+            _updateProfile(UserProfile(
+              id: user.id,
+              email: user.email ?? '',
+              role: UserRole.salesStaff,
+              displayName: user.userMetadata?['display_name'] ?? '',
+              requiresPasswordReset: user.userMetadata?['requires_password_reset'] as bool? ?? false,
+            ));
+          }
         }
       }
     });
+  }
+
+  Future<void> _initSession() async {
+    final user = _client.auth.currentUser;
+    if (user != null) {
+      final cachedProfile = await ProfileCache.load();
+      if (cachedProfile != null && cachedProfile.id == user.id && _currentProfile == null) {
+        _updateProfile(cachedProfile);
+      }
+    }
   }
 
   void _updateProfile(UserProfile? profile) {
@@ -71,16 +97,19 @@ class SupabaseAuthService implements AuthService {
     
     // Check if the user account is active
     if (profile == null || !profile.isActive) {
+      await ProfileCache.clear();
       await _client.auth.signOut();
       throw Exception('This account has been deactivated. Please contact support.');
     }
     
+    await ProfileCache.save(profile);
     _updateProfile(profile);
     return profile;
   }
 
   @override
   Future<void> signOut() async {
+    await ProfileCache.clear();
     await _client.auth.signOut();
     _updateProfile(null);
   }
@@ -102,8 +131,12 @@ class SupabaseAuthService implements AuthService {
     
     // Refresh the profile locally
     final updatedProfile = await getProfile(user.id);
-    _updateProfile(updatedProfile);
+    if (updatedProfile != null) {
+      await ProfileCache.save(updatedProfile);
+      _updateProfile(updatedProfile);
+    }
   }
+
 
   @override
   Future<UserProfile?> getProfile(String userId) async {
@@ -167,6 +200,17 @@ class MockAuthService implements AuthService {
   UserProfile? _currentProfile;
   final _profileController = StreamController<UserProfile?>.broadcast();
 
+  MockAuthService() {
+    _initMockSession();
+  }
+
+  Future<void> _initMockSession() async {
+    final cached = await ProfileCache.load();
+    if (cached != null) {
+      _updateProfile(cached);
+    }
+  }
+
   // In-memory data store for testing
   final List<UserProfile> _mockProfiles = [
     UserProfile(
@@ -228,9 +272,11 @@ class MockAuthService implements AuthService {
     
     // Check if the user account is active
     if (!profile.isActive) {
+      await ProfileCache.clear();
       throw Exception('This account has been deactivated. Please contact support.');
     }
     
+    await ProfileCache.save(profile);
     _updateProfile(profile);
     return profile;
   }
@@ -238,8 +284,10 @@ class MockAuthService implements AuthService {
   @override
   Future<void> signOut() async {
     await Future.delayed(const Duration(milliseconds: 300));
+    await ProfileCache.clear();
     _updateProfile(null);
   }
+
 
   @override
   Future<void> updatePassword(String newPassword) async {
@@ -252,6 +300,7 @@ class MockAuthService implements AuthService {
       final updated = _mockProfiles[index].copyWith(requiresPasswordReset: false);
       _mockProfiles[index] = updated;
       _mockPasswords[updated.email.toLowerCase()] = newPassword;
+      await ProfileCache.save(updated);
       _updateProfile(updated);
     }
   }
@@ -330,3 +379,38 @@ class AuthServiceFactory {
     }
   }
 }
+
+class ProfileCache {
+  static Future<File> get _file async {
+    final dir = await getApplicationDocumentsDirectory();
+    return File('${dir.path}/cached_user_profile.json');
+  }
+
+  static Future<void> save(UserProfile profile) async {
+    try {
+      final f = await _file;
+      await f.writeAsString(jsonEncode(profile.toJson()));
+    } catch (_) {}
+  }
+
+  static Future<UserProfile?> load() async {
+    try {
+      final f = await _file;
+      if (await f.exists()) {
+        final content = await f.readAsString();
+        return UserProfile.fromJson(jsonDecode(content));
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  static Future<void> clear() async {
+    try {
+      final f = await _file;
+      if (await f.exists()) {
+        await f.delete();
+      }
+    } catch (_) {}
+  }
+}
+
