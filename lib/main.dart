@@ -16,6 +16,8 @@ import 'services/warehouse_service.dart';
 import 'features/warehouse/controllers/warehouse_controller.dart';
 import 'services/admin_service.dart';
 import 'features/admin/controllers/admin_controller.dart';
+import 'database/database.dart';
+import 'services/sync_manager.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -31,6 +33,12 @@ void main() async {
       // In case initialization fails, print error. The developer can fix credentials.
       debugPrint('Supabase Initialization Error: $e');
     }
+  }
+
+  // Initialize SQLite LocalDatabase & SyncManager
+  await LocalDatabase.initialize();
+  if (!SupabaseConfig.useMock) {
+    await SyncManager.initialize(LocalDatabase.instance, Supabase.instance.client);
   }
 
   runApp(const MyApp());
@@ -56,15 +64,11 @@ class MyApp extends StatelessWidget {
         ),
         // Provide the warehouse service
         Provider<WarehouseService>(
-          create: (_) => SupabaseConfig.useMock
-              ? MockWarehouseService()
-              : SupabaseWarehouseService(Supabase.instance.client),
+          create: (_) => SupabaseWarehouseService(Supabase.instance.client),
         ),
         // Provide the admin service
         Provider<AdminService>(
-          create: (_) => SupabaseConfig.useMock
-              ? MockAdminService()
-              : SupabaseAdminService(Supabase.instance.client),
+          create: (_) => SupabaseAdminService(Supabase.instance.client),
         ),
         // Provide the warehouse controller
         ChangeNotifierProxyProvider2<WarehouseService, AdminService, WarehouseController>(
@@ -106,6 +110,15 @@ class RootNavigationRouter extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final authController = context.watch<AuthController>();
+
+    // 0. Initializing auth session & restoring profile -> Show Loading Splash
+    if (authController.isInitializing) {
+      return const Scaffold(
+        body: Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
 
     // 1. Not Authenticated -> Show Login Page
     if (!authController.isAuthenticated) {
