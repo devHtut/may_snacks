@@ -98,6 +98,7 @@ class _WarehouseDashboardState extends State<WarehouseDashboard> {
               setState(() {
                 _selectedIndex = index;
               });
+              context.read<WarehouseController>().loadAllWarehouseData();
             },
             labelType: isWide ? NavigationRailLabelType.none : NavigationRailLabelType.all,
             destinations: const [

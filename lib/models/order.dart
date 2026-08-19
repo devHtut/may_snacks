@@ -1,7 +1,8 @@
 enum OrderStatus {
   pending,
   packed,
-  delivered;
+  delivered,
+  cancelled;
 
   String get key {
     switch (this) {
@@ -11,6 +12,8 @@ enum OrderStatus {
         return 'packed';
       case OrderStatus.delivered:
         return 'delivered';
+      case OrderStatus.cancelled:
+        return 'cancelled';
     }
   }
 
@@ -20,6 +23,8 @@ enum OrderStatus {
         return OrderStatus.packed;
       case 'delivered':
         return OrderStatus.delivered;
+      case 'cancelled':
+        return OrderStatus.cancelled;
       case 'pending':
       default:
         return OrderStatus.pending;
@@ -34,6 +39,8 @@ enum OrderStatus {
         return 'Packed';
       case OrderStatus.delivered:
         return 'Delivered';
+      case OrderStatus.cancelled:
+        return 'Cancelled';
     }
   }
 }
@@ -149,4 +156,13 @@ class Order {
       items: items ?? this.items,
     );
   }
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    return other is Order && other.id == id;
+  }
+
+  @override
+  int get hashCode => id.hashCode;
 }

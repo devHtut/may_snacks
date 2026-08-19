@@ -103,27 +103,44 @@ class _SalesDashboardState extends State<SalesDashboard> {
                     ),
                   ),
                   if (warehouseController.pendingSyncCount > 0)
-                    ElevatedButton.icon(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.white,
-                        foregroundColor: Colors.black87,
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                        minimumSize: Size.zero,
-                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                      ),
-                      onPressed: () async {
-                        final synced = await warehouseController.syncOfflineOrders();
-                        if (context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text('✅ Successfully synced $synced pending orders to Supabase Cloud!'),
-                              backgroundColor: Colors.green[800],
-                            ),
-                          );
-                        }
-                      },
-                      icon: const Icon(Icons.cloud_upload_rounded, size: 14),
-                      label: const Text('Sync Now', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        ElevatedButton.icon(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.white,
+                            foregroundColor: Colors.black87,
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                            minimumSize: Size.zero,
+                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          ),
+                          onPressed: () async {
+                            final synced = await warehouseController.syncOfflineOrders();
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('Synced $synced pending operations!'),
+                                  backgroundColor: Colors.green[800],
+                                ),
+                              );
+                            }
+                          },
+                          icon: const Icon(Icons.cloud_upload_rounded, size: 14),
+                          label: const Text('Sync Now', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.cleaning_services_rounded, color: Colors.white, size: 18),
+                          tooltip: 'Clear Stale Queue',
+                          onPressed: () async {
+                            await warehouseController.clearSyncQueue();
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('Stale sync queue cleared.')),
+                              );
+                            }
+                          },
+                        ),
+                      ],
                     ),
                 ],
               ),
@@ -145,6 +162,7 @@ class _SalesDashboardState extends State<SalesDashboard> {
           setState(() {
             _selectedIndex = index;
           });
+          context.read<WarehouseController>().loadAllWarehouseData();
         },
         selectedItemColor: theme.primaryColor,
         unselectedItemColor: Colors.grey,

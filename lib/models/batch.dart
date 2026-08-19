@@ -84,4 +84,13 @@ class StockBatch {
       createdAt: createdAt ?? this.createdAt,
     );
   }
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    return other is StockBatch && other.id == id;
+  }
+
+  @override
+  int get hashCode => id.hashCode;
 }

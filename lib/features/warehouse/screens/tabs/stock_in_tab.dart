@@ -105,8 +105,11 @@ class _StockInTabState extends State<StockInTab> {
       return const Center(child: Text('No products available. Please load database.'));
     }
 
-    // Default select first product
-    _selectedProduct ??= products.first;
+    if (_selectedProduct != null && products.any((p) => p.id == _selectedProduct!.id)) {
+      _selectedProduct = products.firstWhere((p) => p.id == _selectedProduct!.id);
+    } else {
+      _selectedProduct = products.isNotEmpty ? products.first : null;
+    }
 
     return Center(
       child: Container(

@@ -50,8 +50,9 @@ class _ProductsTabState extends State<ProductsTab> {
                 final product = products[index];
                 final isSelected = product.id == _selectedProduct?.id;
                 
-                final productBatches = batches.where((b) => b.productId == product.id && b.quantity > 0 && !b.isExpired);
-                final activeStock = productBatches.fold<int>(0, (sum, b) => sum + b.quantity);
+                final physicalStock = controller.getPhysicalStock(product.id);
+                final reservedStock = controller.getReservedStock(product.id);
+                final availableStock = controller.getAvailableStock(product.id);
 
                 return ListTile(
                   selected: isSelected,
@@ -62,21 +63,35 @@ class _ProductsTabState extends State<ProductsTab> {
                       fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
                     ),
                   ),
-                  subtitle: Text('SKU: ${product.sku} | Price: ${NumberFormat.currency(symbol: 'Ks ', decimalDigits: 0).format(product.price)}'),
-                  trailing: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: activeStock > 0 ? Colors.green.withOpacity(0.1) : Colors.red.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Text(
-                      '$activeStock in stock',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                        color: activeStock > 0 ? Colors.green[800] : Colors.red[800],
+                  subtitle: Text('SKU: ${product.sku} | Physical: $physicalStock | Price: ${NumberFormat.currency(symbol: 'Ks ', decimalDigits: 0).format(product.price)}'),
+                  trailing: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: availableStock > 0 ? Colors.green.withOpacity(0.1) : Colors.red.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          '$availableStock available',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            color: availableStock > 0 ? Colors.green[800] : Colors.red[800],
+                          ),
+                        ),
                       ),
-                    ),
+                      if (reservedStock > 0)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 2),
+                          child: Text(
+                            '($reservedStock reserved)',
+                            style: const TextStyle(fontSize: 10, color: Colors.orange, fontWeight: FontWeight.w600),
+                          ),
+                        ),
+                    ],
                   ),
                   onTap: () {
                     setState(() {
@@ -124,13 +139,13 @@ class _ProductsTabState extends State<ProductsTab> {
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.end,
                         children: [
-                          const Text('Total Warehouse Stock', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                          Text('Physical: $totalStock | Reserved: ${controller.getReservedStock(_selectedProduct?.id ?? '')}', style: const TextStyle(fontSize: 11, color: Colors.grey)),
                           const SizedBox(height: 4),
                           Text(
-                            '$totalStock units',
+                            '${controller.getAvailableStock(_selectedProduct?.id ?? '')} Available',
                             style: theme.textTheme.titleMedium?.copyWith(
                               fontWeight: FontWeight.bold,
-                              color: totalStock > 0 ? theme.primaryColor : Colors.red,
+                              color: controller.getAvailableStock(_selectedProduct?.id ?? '') > 0 ? theme.primaryColor : Colors.red,
                             ),
                           ),
                         ],

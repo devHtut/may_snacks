@@ -6,6 +6,7 @@ import '../../../models/order.dart';
 import '../../../models/disposal.dart';
 import '../../../models/physical_audit.dart';
 import '../../../models/customer.dart';
+import '../../../models/reserved_stock.dart';
 import '../../../services/warehouse_service.dart';
 import '../../../services/admin_service.dart';
 import '../../../database/database.dart' show LocalDatabase, AppDatabase;
@@ -22,6 +23,7 @@ class WarehouseController extends ChangeNotifier {
   List<DisposalRequest> _disposals = [];
   List<PhysicalAudit> _audits = [];
   List<Customer> _customers = [];
+  List<ReservedStock> _reservedStocks = [];
 
   // Cart state for mobile sales ordering
   final Map<String, int> _cart = {};
@@ -42,6 +44,7 @@ class WarehouseController extends ChangeNotifier {
 
   void _onSyncChange() {
     _updatePendingCount();
+    loadAllWarehouseData();
   }
 
   Future<void> _updatePendingCount() async {
@@ -63,6 +66,7 @@ class WarehouseController extends ChangeNotifier {
   List<DisposalRequest> get disposals => _disposals;
   List<PhysicalAudit> get audits => _audits;
   List<Customer> get customers => _customers;
+  List<ReservedStock> get reservedStocks => _reservedStocks;
   List<Customer> get approvedCustomers => _customers.where((c) => c.status == CustomerStatus.approved).toList();
   List<Customer> get pendingCustomers => _customers.where((c) => c.status == CustomerStatus.pending).toList();
   
@@ -82,10 +86,23 @@ class WarehouseController extends ChangeNotifier {
     return count;
   }
 
-  int getAvailableStock(String productId) {
+  int getPhysicalStock(String productId) {
     return _batches
         .where((b) => b.productId == productId && b.quantity > 0 && !b.isExpired)
         .fold(0, (sum, b) => sum + b.quantity);
+  }
+
+  int getReservedStock(String productId) {
+    return _reservedStocks
+        .where((r) => r.productId == productId && r.isActive)
+        .fold(0, (sum, r) => sum + r.quantity);
+  }
+
+  int getAvailableStock(String productId) {
+    final physical = getPhysicalStock(productId);
+    final reserved = getReservedStock(productId);
+    final available = physical - reserved;
+    return available > 0 ? available : 0;
   }
 
   bool updateCartItem(String productId, int quantity) {
@@ -197,6 +214,7 @@ class WarehouseController extends ChangeNotifier {
         _service.fetchDisposalRequests(),
         _service.fetchPhysicalAudits(),
         _service.fetchCustomers(),
+        _service.fetchReservedStocks(),
       ]);
 
       _products = results[0] as List<Product>;
@@ -205,6 +223,7 @@ class WarehouseController extends ChangeNotifier {
       _disposals = results[3] as List<DisposalRequest>;
       _audits = results[4] as List<PhysicalAudit>;
       _customers = results[5] as List<Customer>;
+      _reservedStocks = results[6] as List<ReservedStock>;
     } catch (e) {
       _errorMessage = ErrorHandler.toUserFriendlyMessage(e);
     } finally {
@@ -254,11 +273,7 @@ class WarehouseController extends ChangeNotifier {
 
     try {
       await _service.fulfillOrderFEFO(orderId);
-      // Reload batches and orders to get updated stock balances and status
-      final updatedOrders = await _service.fetchIncomingOrders();
-      final updatedBatches = await _service.fetchBatches();
-      _orders = updatedOrders;
-      _batches = updatedBatches;
+      await loadAllWarehouseData();
 
       await _adminService?.logEvent(
         'ORDER_FULFILLED',
@@ -266,8 +281,6 @@ class WarehouseController extends ChangeNotifier {
         actorName: 'U Mg Mg (Warehouse Manager)',
       );
 
-      _isLoading = false;
-      notifyListeners();
       return true;
     } catch (e) {
       _errorMessage = ErrorHandler.toUserFriendlyMessage(e);
@@ -530,5 +543,10 @@ class WarehouseController extends ChangeNotifier {
       notifyListeners();
       return false;
     }
+  }
+
+  Future<void> clearSyncQueue() async {
+    await _syncManager?.clearPendingQueue();
+    await _updatePendingCount();
   }
 }

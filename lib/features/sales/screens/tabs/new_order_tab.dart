@@ -474,14 +474,7 @@ class _NewOrderTabState extends State<NewOrderTab> {
                           final product = products.firstWhere(
                             (p) => p.id == entry.key,
                           );
-                          final totalStock = batches
-                              .where(
-                                (b) =>
-                                    b.productId == product.id &&
-                                    b.quantity > 0 &&
-                                    !b.isExpired,
-                              )
-                              .fold(0, (sum, b) => sum + b.quantity);
+                          final totalStock = warehouseController.getAvailableStock(product.id);
 
                           return Padding(
                             padding: const EdgeInsets.symmetric(vertical: 8),
@@ -819,14 +812,7 @@ class _NewOrderTabState extends State<NewOrderTab> {
                       itemBuilder: (context, index) {
                         final product = filteredProducts[index];
                         final qty = cart[product.id] ?? 0;
-                        final totalStock = batches
-                            .where(
-                              (b) =>
-                                  b.productId == product.id &&
-                                  b.quantity > 0 &&
-                                  !b.isExpired,
-                            )
-                            .fold(0, (sum, b) => sum + b.quantity);
+                        final totalStock = warehouseController.getAvailableStock(product.id);
 
                         return Card(
                           margin: EdgeInsets.zero,

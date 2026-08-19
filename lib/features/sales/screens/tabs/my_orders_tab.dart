@@ -137,6 +137,8 @@ class MyOrdersTab extends StatelessWidget {
                       statusColor = Colors.blue;
                     } else if (order.status == OrderStatus.delivered) {
                       statusColor = Colors.green;
+                    } else if (order.status == OrderStatus.cancelled) {
+                      statusColor = Colors.red;
                     }
 
                     return Card(

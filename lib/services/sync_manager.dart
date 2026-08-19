@@ -184,7 +184,8 @@ class SyncManager extends ChangeNotifier {
             }
           } catch (e) {
             debugPrint('[SyncManager] General error on mutation #${mutation.id}: $e');
-            rethrow;
+            await (_db.delete(_db.mutations)..where((t) => t.id.equals(mutation.id))).go();
+            debugPrint('[SyncManager] Discarded problematic mutation #${mutation.id}.');
           }
         }
 
@@ -206,6 +207,11 @@ class SyncManager extends ChangeNotifier {
         Future.microtask(() => processQueue());
       }
     }
+  }
+
+  Future<void> clearPendingQueue() async {
+    await _db.delete(_db.mutations).go();
+    notifyListeners();
   }
 
   Future<void> waitForSync() async {
@@ -245,6 +251,8 @@ class SyncManager extends ChangeNotifier {
               .write(BatchesCompanion(productId: Value(serverId)));
           await (_db.update(_db.orderItems)..where((t) => t.productId.equals(clientId)))
               .write(OrderItemsCompanion(productId: Value(serverId)));
+          await (_db.update(_db.reservedStocks)..where((t) => t.productId.equals(clientId)))
+              .write(ReservedStocksCompanion(productId: Value(serverId)));
           await (_db.update(_db.disposals)..where((t) => t.productId.equals(clientId)))
               .write(DisposalsCompanion(productId: Value(serverId)));
           await (_db.update(_db.physicalAudits)..where((t) => t.productId.equals(clientId)))
@@ -261,10 +269,14 @@ class SyncManager extends ChangeNotifier {
               .write(OrdersCompanion(id: Value(serverId)));
           await (_db.update(_db.orderItems)..where((t) => t.orderId.equals(clientId)))
               .write(OrderItemsCompanion(orderId: Value(serverId)));
+          await (_db.update(_db.reservedStocks)..where((t) => t.orderId.equals(clientId)))
+              .write(ReservedStocksCompanion(orderId: Value(serverId)));
           break;
         case 'batches':
           await (_db.update(_db.batches)..where((t) => t.id.equals(clientId)))
               .write(BatchesCompanion(id: Value(serverId)));
+          await (_db.update(_db.reservedStocks)..where((t) => t.batchId.equals(clientId)))
+              .write(ReservedStocksCompanion(batchId: Value(serverId)));
           await (_db.update(_db.disposals)..where((t) => t.batchId.equals(clientId)))
               .write(DisposalsCompanion(batchId: Value(serverId)));
           await (_db.update(_db.physicalAudits)..where((t) => t.batchId.equals(clientId)))
@@ -273,6 +285,10 @@ class SyncManager extends ChangeNotifier {
         case 'order_items':
           await (_db.update(_db.orderItems)..where((t) => t.id.equals(clientId)))
               .write(OrderItemsCompanion(id: Value(serverId)));
+          break;
+        case 'reserved_stocks':
+          await (_db.update(_db.reservedStocks)..where((t) => t.id.equals(clientId)))
+              .write(ReservedStocksCompanion(id: Value(serverId)));
           break;
         case 'disposals':
           await (_db.update(_db.disposals)..where((t) => t.id.equals(clientId)))

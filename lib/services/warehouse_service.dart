@@ -8,11 +8,13 @@ import '../models/order.dart' as m;
 import '../models/disposal.dart' as m;
 import '../models/physical_audit.dart' as m;
 import '../models/customer.dart' as m;
+import '../models/reserved_stock.dart' as m;
 import '../database/database.dart';
 import 'sync_manager.dart';
 
 abstract class WarehouseService {
   Future<List<m.Product>> fetchProducts();
+  Future<List<m.ReservedStock>> fetchReservedStocks();
   Future<List<m.StockBatch>> fetchBatches();
   Future<m.StockBatch> stockIn({
     required String productId,
@@ -153,9 +155,75 @@ class SupabaseWarehouseService implements WarehouseService {
     }
   }
 
+  Future<void> _syncReservedStocksDown() async {
+    try {
+      final response = await _client.from('reserved_stocks').select();
+      await _db.transaction(() async {
+        for (final row in response as List) {
+          await _db.into(_db.reservedStocks).insertOnConflictUpdate(ReservedStocksCompanion.insert(
+            id: row['id'],
+            orderId: row['order_id'],
+            productId: row['product_id'],
+            batchId: drift.Value(row['batch_id']),
+            quantity: row['quantity'],
+            status: row['status'] ?? 'active',
+            createdAt: DateTime.parse(row['created_at']),
+          ));
+        }
+      });
+    } on PostgrestException catch (e) {
+      debugPrint('[WarehouseService] Supabase reserved_stocks table missing/sync pending: ${e.message}');
+    } catch (e) {
+      debugPrint('Error syncing reserved_stocks down: $e');
+    }
+  }
+
+  Future<void> _syncBatchesDown() async {
+    try {
+      final response = await _client.from('batches').select();
+      await _db.transaction(() async {
+        for (final row in response as List) {
+          await _db.into(_db.batches).insertOnConflictUpdate(BatchesCompanion.insert(
+            id: row['id'],
+            productId: row['product_id'],
+            batchNumber: row['batch_number'],
+            quantity: row['quantity'],
+            initialQuantity: row['initial_quantity'],
+            expiryDate: DateTime.parse(row['expiry_date']),
+            receivedDate: DateTime.parse(row['received_date']),
+            createdAt: DateTime.parse(row['created_at']),
+          ));
+        }
+      });
+    } catch (e) {
+      debugPrint('[WarehouseService] Error syncing batches down: $e');
+    }
+  }
+
   // ---------------------------------------------------------------------------
   // IMPLEMENTATION
   // ---------------------------------------------------------------------------
+
+  @override
+  Future<List<m.ReservedStock>> fetchReservedStocks() async {
+    _syncReservedStocksDown();
+
+    try {
+      final rows = await (_db.select(_db.reservedStocks)..orderBy([(t) => drift.OrderingTerm.desc(t.createdAt)])).get();
+      return rows.map((r) => m.ReservedStock(
+        id: r.id,
+        orderId: r.orderId,
+        productId: r.productId,
+        batchId: r.batchId,
+        quantity: r.quantity,
+        status: r.status,
+        createdAt: r.createdAt,
+      )).toList();
+    } catch (e) {
+      debugPrint('[WarehouseService] Error reading local reservedStocks: $e');
+      return [];
+    }
+  }
 
   @override
   Future<List<m.Product>> fetchProducts() async {
@@ -264,7 +332,18 @@ class SupabaseWarehouseService implements WarehouseService {
       ));
     }
 
-    // 2. Queue Mutations for SyncManager
+    for (final item in populatedItems) {
+      final reservedId = _uuid.v4();
+      await _db.into(_db.reservedStocks).insert(ReservedStocksCompanion.insert(
+        id: reservedId,
+        orderId: orderId,
+        productId: item.productId,
+        quantity: item.quantity,
+        status: 'active',
+        createdAt: now,
+      ));
+    }
+
     await _sync.queueMutation(
       actionType: 'INSERT',
       tableName: 'orders',
@@ -289,6 +368,18 @@ class SupabaseWarehouseService implements WarehouseService {
           'quantity': item.quantity,
           'product_name': item.productName,
           'product_price': item.productPrice,
+        },
+      );
+
+      await _sync.queueMutation(
+        actionType: 'INSERT',
+        tableName: 'reserved_stocks',
+        payload: {
+          'order_id': orderId,
+          'product_id': item.productId,
+          'quantity': item.quantity,
+          'status': 'active',
+          'created_at': now.toIso8601String(),
         },
       );
     }
@@ -408,13 +499,15 @@ class SupabaseWarehouseService implements WarehouseService {
 
   @override
   Future<void> cancelOrder(String orderId) async {
-    await (_db.delete(_db.orderItems)..where((t) => t.orderId.equals(orderId))).go();
-    await (_db.delete(_db.orders)..where((t) => t.id.equals(orderId))).go();
-    
+    await (_db.update(_db.reservedStocks)..where((t) => t.orderId.equals(orderId)))
+        .write(const ReservedStocksCompanion(status: drift.Value('released')));
+    await (_db.update(_db.orders)..where((t) => t.id.equals(orderId)))
+        .write(const OrdersCompanion(status: drift.Value('cancelled')));
+
     await _sync.queueMutation(
-      actionType: 'DELETE',
+      actionType: 'UPDATE',
       tableName: 'orders',
-      payload: {'id': orderId},
+      payload: {'id': orderId, 'status': 'cancelled'},
     );
   }
 
@@ -479,8 +572,24 @@ class SupabaseWarehouseService implements WarehouseService {
 
   @override
   Future<List<m.StockBatch>> fetchBatches() async {
-    final response = await _client.from('batches').select().order('expiry_date', ascending: true);
-    return (response as List).map((json) => m.StockBatch.fromJson(json)).toList();
+    _syncBatchesDown();
+
+    try {
+      final rows = await (_db.select(_db.batches)..orderBy([(t) => drift.OrderingTerm.asc(t.expiryDate)])).get();
+      return rows.map((r) => m.StockBatch(
+        id: r.id,
+        productId: r.productId,
+        batchNumber: r.batchNumber,
+        quantity: r.quantity,
+        initialQuantity: r.initialQuantity,
+        expiryDate: r.expiryDate,
+        receivedDate: r.receivedDate,
+        createdAt: r.createdAt,
+      )).toList();
+    } catch (e) {
+      debugPrint('[WarehouseService] Error reading local batches: $e');
+      return [];
+    }
   }
 
   @override
@@ -490,52 +599,170 @@ class SupabaseWarehouseService implements WarehouseService {
     required int quantity,
     required DateTime expiryDate,
   }) async {
-    final response = await _client.from('batches').insert({
-      'product_id': productId,
-      'batch_number': batchNumber,
-      'quantity': quantity,
-      'initial_quantity': quantity,
-      'expiry_date': expiryDate.toIso8601String().substring(0, 10),
-      'received_date': DateTime.now().toIso8601String().substring(0, 10),
-    }).select().single();
-    return m.StockBatch.fromJson(response);
+    final batchId = _uuid.v4();
+    final now = DateTime.now();
+
+    await _db.into(_db.batches).insert(BatchesCompanion.insert(
+      id: batchId,
+      productId: productId,
+      batchNumber: batchNumber,
+      quantity: quantity,
+      initialQuantity: quantity,
+      expiryDate: expiryDate,
+      receivedDate: now,
+      createdAt: now,
+    ));
+
+    await _sync.queueMutation(
+      actionType: 'INSERT',
+      tableName: 'batches',
+      payload: {
+        'id': batchId,
+        'product_id': productId,
+        'batch_number': batchNumber,
+        'quantity': quantity,
+        'initial_quantity': quantity,
+        'expiry_date': expiryDate.toIso8601String().substring(0, 10),
+        'received_date': now.toIso8601String().substring(0, 10),
+      },
+    );
+
+    return m.StockBatch(
+      id: batchId,
+      productId: productId,
+      batchNumber: batchNumber,
+      quantity: quantity,
+      initialQuantity: quantity,
+      expiryDate: expiryDate,
+      receivedDate: now,
+      createdAt: now,
+    );
   }
 
   @override
   Future<void> fulfillOrderFEFO(String orderId) async {
-    // Keep remote fulfillment logic as it relies on live batch deduction
-    final orderResponse = await _client.from('orders').select('*, order_items(*, products(*))').eq('id', orderId).single();
-    final order = m.Order.fromJson(orderResponse);
-    if (order.status != m.OrderStatus.pending) throw Exception('Order is already fulfilled or processed.');
+    final orderRow = await (_db.select(_db.orders)..where((t) => t.id.equals(orderId))).getSingleOrNull();
+    if (orderRow == null) throw Exception('Order not found in local database.');
+    if (orderRow.status != m.OrderStatus.pending.key) throw Exception('Order is already fulfilled or processed.');
 
-    final List<Map<String, dynamic>> batchUpdates = [];
-    for (final item in order.items) {
-      final todayStr = DateTime.now().toIso8601String().substring(0, 10);
-      final batchesResponse = await _client.from('batches').select().eq('product_id', item.productId).gt('quantity', 0).gte('expiry_date', todayStr).order('expiry_date', ascending: true);
-      final batches = (batchesResponse as List).map((json) => m.StockBatch.fromJson(json)).toList();
-      int remainingQty = item.quantity;
-      for (final batch in batches) {
-        if (remainingQty <= 0) break;
-        if (batch.quantity >= remainingQty) {
-          batchUpdates.add({'id': batch.id, 'quantity': batch.quantity - remainingQty});
-          remainingQty = 0;
-        } else {
-          remainingQty -= batch.quantity;
-          batchUpdates.add({'id': batch.id, 'quantity': 0});
+    final itemRows = await (_db.select(_db.orderItems)..where((t) => t.orderId.equals(orderId))).get();
+    if (itemRows.isEmpty) throw Exception('Order contains no items.');
+
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+
+    await _db.transaction(() async {
+      for (final item in itemRows) {
+        final batchRows = await (_db.select(_db.batches)
+              ..where((t) => t.productId.equals(item.productId) & t.quantity.isBiggerThanValue(0) & t.expiryDate.isBiggerOrEqualValue(today))
+              ..orderBy([(t) => drift.OrderingTerm.asc(t.expiryDate)]))
+            .get();
+
+        int remainingQty = item.quantity;
+        for (final batch in batchRows) {
+          if (remainingQty <= 0) break;
+          if (batch.quantity >= remainingQty) {
+            final newQty = batch.quantity - remainingQty;
+            await (_db.update(_db.batches)..where((t) => t.id.equals(batch.id)))
+                .write(BatchesCompanion(quantity: drift.Value(newQty)));
+            remainingQty = 0;
+            try {
+              await _client.from('batches').update({'quantity': newQty}).eq('id', batch.id);
+            } catch (_) {}
+          } else {
+            remainingQty -= batch.quantity;
+            await (_db.update(_db.batches)..where((t) => t.id.equals(batch.id)))
+                .write(const BatchesCompanion(quantity: drift.Value(0)));
+            try {
+              await _client.from('batches').update({'quantity': 0}).eq('id', batch.id);
+            } catch (_) {}
+          }
+        }
+
+        if (remainingQty > 0) {
+          throw Exception('Insufficient stock for product in warehouse batches.');
         }
       }
-      if (remainingQty > 0) throw Exception('Insufficient stock for product.');
+
+      await (_db.update(_db.orders)..where((t) => t.id.equals(orderId)))
+          .write(OrdersCompanion(status: drift.Value(m.OrderStatus.packed.key)));
+      try {
+        await _client.from('orders').update({'status': m.OrderStatus.packed.key}).eq('id', orderId);
+      } catch (_) {}
+
+      await (_db.update(_db.reservedStocks)..where((t) => t.orderId.equals(orderId)))
+          .write(const ReservedStocksCompanion(status: drift.Value('fulfilled')));
+      try {
+        await _client.from('reserved_stocks').update({'status': 'fulfilled'}).eq('order_id', orderId);
+      } catch (_) {}
+    });
+  }
+
+  Future<void> _syncDisposalsDown() async {
+    try {
+      final response = await _client.from('disposals').select();
+      await _db.transaction(() async {
+        for (final row in response as List) {
+          await _db.into(_db.disposals).insertOnConflictUpdate(DisposalsCompanion.insert(
+            id: row['id'],
+            productId: row['product_id'],
+            batchId: row['batch_id'],
+            quantity: row['quantity'],
+            reason: row['reason'] ?? '',
+            status: row['status'] ?? 'pending',
+            requestedBy: drift.Value(row['requested_by']),
+            createdAt: DateTime.parse(row['created_at']),
+          ));
+        }
+      });
+    } catch (e) {
+      debugPrint('[WarehouseService] Error syncing disposals down: $e');
     }
-    for (final update in batchUpdates) {
-      await _client.from('batches').update({'quantity': update['quantity']}).eq('id', update['id']);
+  }
+
+  Future<void> _syncPhysicalAuditsDown() async {
+    try {
+      final response = await _client.from('physical_audits').select();
+      await _db.transaction(() async {
+        for (final row in response as List) {
+          await _db.into(_db.physicalAudits).insertOnConflictUpdate(PhysicalAuditsCompanion.insert(
+            id: row['id'],
+            productId: row['product_id'],
+            batchId: row['batch_id'],
+            systemQuantity: row['system_quantity'],
+            physicalQuantity: row['physical_quantity'],
+            discrepancy: row['discrepancy'],
+            notes: drift.Value(row['notes']),
+            auditedBy: drift.Value(row['audited_by']),
+            createdAt: DateTime.parse(row['created_at']),
+          ));
+        }
+      });
+    } catch (e) {
+      debugPrint('[WarehouseService] Error syncing physicalAudits down: $e');
     }
-    await _client.from('orders').update({'status': m.OrderStatus.packed.key}).eq('id', orderId);
   }
 
   @override
   Future<List<m.DisposalRequest>> fetchDisposalRequests() async {
-    final response = await _client.from('disposals').select('*, products(*), batches(*), profiles(display_name)').order('created_at', ascending: false);
-    return (response as List).map((json) => m.DisposalRequest.fromJson(json)).toList();
+    _syncDisposalsDown();
+
+    try {
+      final rows = await (_db.select(_db.disposals)..orderBy([(t) => drift.OrderingTerm.desc(t.createdAt)])).get();
+      return rows.map((r) => m.DisposalRequest(
+        id: r.id,
+        productId: r.productId,
+        batchId: r.batchId,
+        quantity: r.quantity,
+        reason: r.reason,
+        status: m.DisposalStatus.fromKey(r.status),
+        requestedBy: r.requestedBy,
+        createdAt: r.createdAt,
+      )).toList();
+    } catch (e) {
+      debugPrint('[WarehouseService] Error reading local disposals: $e');
+      return [];
+    }
   }
 
   @override
@@ -545,22 +772,69 @@ class SupabaseWarehouseService implements WarehouseService {
     required int quantity,
     required String reason,
   }) async {
+    final id = _uuid.v4();
+    final now = DateTime.now();
     final currentUser = _client.auth.currentUser;
-    final response = await _client.from('disposals').insert({
-      'product_id': productId,
-      'batch_id': batchId,
-      'quantity': quantity,
-      'reason': reason,
-      'requested_by': currentUser?.id,
-      'status': 'pending',
-    }).select('*, products(*), batches(*), profiles(display_name)').single();
-    return m.DisposalRequest.fromJson(response);
+
+    await _db.into(_db.disposals).insert(DisposalsCompanion.insert(
+      id: id,
+      productId: productId,
+      batchId: batchId,
+      quantity: quantity,
+      reason: reason,
+      status: 'pending',
+      requestedBy: drift.Value(currentUser?.id),
+      createdAt: now,
+    ));
+
+    await _sync.queueMutation(
+      actionType: 'INSERT',
+      tableName: 'disposals',
+      payload: {
+        'id': id,
+        'product_id': productId,
+        'batch_id': batchId,
+        'quantity': quantity,
+        'reason': reason,
+        'requested_by': currentUser?.id,
+        'status': 'pending',
+        'created_at': now.toIso8601String(),
+      },
+    );
+
+    return m.DisposalRequest(
+      id: id,
+      productId: productId,
+      batchId: batchId,
+      quantity: quantity,
+      reason: reason,
+      status: m.DisposalStatus.pending,
+      requestedBy: currentUser?.id,
+      createdAt: now,
+    );
   }
 
   @override
   Future<List<m.PhysicalAudit>> fetchPhysicalAudits() async {
-    final response = await _client.from('physical_audits').select('*, products(*), batches(*), profiles(display_name)').order('created_at', ascending: false);
-    return (response as List).map((json) => m.PhysicalAudit.fromJson(json)).toList();
+    _syncPhysicalAuditsDown();
+
+    try {
+      final rows = await (_db.select(_db.physicalAudits)..orderBy([(t) => drift.OrderingTerm.desc(t.createdAt)])).get();
+      return rows.map((r) => m.PhysicalAudit(
+        id: r.id,
+        productId: r.productId,
+        batchId: r.batchId,
+        systemQuantity: r.systemQuantity,
+        physicalQuantity: r.physicalQuantity,
+        discrepancy: r.discrepancy,
+        notes: r.notes,
+        auditedBy: r.auditedBy,
+        createdAt: r.createdAt,
+      )).toList();
+    } catch (e) {
+      debugPrint('[WarehouseService] Error reading local physicalAudits: $e');
+      return [];
+    }
   }
 
   @override
@@ -571,16 +845,49 @@ class SupabaseWarehouseService implements WarehouseService {
     required int physicalQuantity,
     String? notes,
   }) async {
+    final id = _uuid.v4();
+    final now = DateTime.now();
     final currentUser = _client.auth.currentUser;
-    final response = await _client.from('physical_audits').insert({
-      'product_id': productId,
-      'batch_id': batchId,
-      'system_quantity': systemQuantity,
-      'physical_quantity': physicalQuantity,
-      'discrepancy': physicalQuantity - systemQuantity,
-      'notes': notes,
-      'audited_by': currentUser?.id,
-    }).select('*, products(*), batches(*), profiles(display_name)').single();
-    return m.PhysicalAudit.fromJson(response);
+    final discrepancy = physicalQuantity - systemQuantity;
+
+    await _db.into(_db.physicalAudits).insert(PhysicalAuditsCompanion.insert(
+      id: id,
+      productId: productId,
+      batchId: batchId,
+      systemQuantity: systemQuantity,
+      physicalQuantity: physicalQuantity,
+      discrepancy: discrepancy,
+      notes: drift.Value(notes),
+      auditedBy: drift.Value(currentUser?.id),
+      createdAt: now,
+    ));
+
+    await _sync.queueMutation(
+      actionType: 'INSERT',
+      tableName: 'physical_audits',
+      payload: {
+        'id': id,
+        'product_id': productId,
+        'batch_id': batchId,
+        'system_quantity': systemQuantity,
+        'physical_quantity': physicalQuantity,
+        'discrepancy': discrepancy,
+        'notes': notes,
+        'audited_by': currentUser?.id,
+        'created_at': now.toIso8601String(),
+      },
+    );
+
+    return m.PhysicalAudit(
+      id: id,
+      productId: productId,
+      batchId: batchId,
+      systemQuantity: systemQuantity,
+      physicalQuantity: physicalQuantity,
+      discrepancy: discrepancy,
+      notes: notes,
+      auditedBy: currentUser?.id,
+      createdAt: now,
+    );
   }
 }

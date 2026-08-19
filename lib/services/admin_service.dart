@@ -1,12 +1,17 @@
+import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import '../models/audit_log.dart';
-import '../models/product.dart';
-import '../models/order.dart';
+import 'package:uuid/uuid.dart';
+import 'package:drift/drift.dart' as drift;
+import '../models/audit_log.dart' as m;
+import '../models/product.dart' as m;
+import '../models/order.dart' as m;
+import '../database/database.dart';
+import 'sync_manager.dart';
 
 abstract class AdminService {
-  Future<List<AuditLog>> fetchAuditLogs();
+  Future<List<m.AuditLog>> fetchAuditLogs();
   Future<void> logEvent(String action, String description, {String? actorName});
-  Future<Product> addProduct(String name, String sku, double price);
+  Future<m.Product> addProduct(String name, String sku, double price);
   Future<void> updateProductPrice(String productId, double newPrice);
   Future<void> approveDisposal(String disposalId);
   Future<void> rejectDisposal(String disposalId);
@@ -15,37 +20,102 @@ abstract class AdminService {
 
 class SupabaseAdminService implements AdminService {
   final SupabaseClient _client;
+  final _uuid = const Uuid();
 
   SupabaseAdminService(this._client);
 
+  AppDatabase get _db => LocalDatabase.instance;
+  SyncManager get _sync => LocalDatabase.syncManager;
+
+  Future<void> _syncAuditLogsDown() async {
+    try {
+      final response = await _client
+          .from('audit_logs')
+          .select('*, profiles(display_name)')
+          .order('created_at', ascending: false)
+          .limit(500);
+
+      await _db.transaction(() async {
+        for (final row in response as List) {
+          await _db.into(_db.auditLogs).insertOnConflictUpdate(AuditLogsCompanion.insert(
+            id: row['id'] ?? _uuid.v4(),
+            actorId: drift.Value(row['actor_id'] as String?),
+            action: row['action'] ?? 'UNKNOWN',
+            description: row['description'] ?? '',
+            createdAt: DateTime.parse(row['created_at']),
+          ));
+        }
+      });
+    } catch (e) {
+      debugPrint('[AdminService] Error syncing audit logs down: $e');
+    }
+  }
+
   @override
-  Future<List<AuditLog>> fetchAuditLogs() async {
-    final response = await _client
-        .from('audit_logs')
-        .select('*, profiles(display_name)')
-        .order('created_at', ascending: false);
-    return (response as List).map((json) => AuditLog.fromJson(json)).toList();
+  Future<List<m.AuditLog>> fetchAuditLogs() async {
+    _syncAuditLogsDown();
+
+    try {
+      final rows = await (_db.select(_db.auditLogs)
+            ..orderBy([(t) => drift.OrderingTerm.desc(t.createdAt)])
+            ..limit(500))
+          .get();
+
+      return rows
+          .map((r) => m.AuditLog(
+                id: r.id,
+                actorId: r.actorId,
+                action: r.action,
+                description: r.description,
+                createdAt: r.createdAt,
+              ))
+          .toList();
+    } catch (e) {
+      debugPrint('[AdminService] Error reading local audit logs: $e');
+      return [];
+    }
   }
 
   @override
   Future<void> logEvent(String action, String description, {String? actorName}) async {
-    final user = _client.auth.currentUser;
-    await _client.from('audit_logs').insert({
-      'actor_id': user?.id,
-      'action': action,
-      'description': description,
-    });
+    try {
+      final user = _client.auth.currentUser;
+      final id = _uuid.v4();
+      final now = DateTime.now();
+
+      await _db.into(_db.auditLogs).insert(AuditLogsCompanion.insert(
+        id: id,
+        actorId: drift.Value(user?.id),
+        action: action,
+        description: description,
+        createdAt: now,
+      ));
+
+      await _sync.queueMutation(
+        actionType: 'INSERT',
+        tableName: 'audit_logs',
+        payload: {
+          'id': id,
+          'actor_id': user?.id,
+          'action': action,
+          'description': description,
+          'created_at': now.toIso8601String(),
+        },
+      );
+    } catch (e) {
+      debugPrint('[AdminService] Local audit log error (handled): $e');
+    }
   }
 
   @override
-  Future<Product> addProduct(String name, String sku, double price) async {
+  Future<m.Product> addProduct(String name, String sku, double price) async {
     final response = await _client.from('products').insert({
       'name': name,
       'sku': sku,
       'price': price,
     }).select().single();
     
-    final product = Product.fromJson(response);
+    final product = m.Product.fromJson(response);
     await logEvent('PRODUCT_CREATED', 'Added product ${product.name} (SKU: ${product.sku}) with price ${product.price}.');
     return product;
   }
@@ -59,7 +129,7 @@ class SupabaseAdminService implements AdminService {
         .select()
         .single();
         
-    final product = Product.fromJson(response);
+    final product = m.Product.fromJson(response);
     await logEvent('PRICE_UPDATED', 'Updated wholesale price of ${product.name} to $newPrice.');
   }
 
@@ -93,7 +163,7 @@ class SupabaseAdminService implements AdminService {
           .order('created_at', ascending: true);
 
       final rawList = response as List;
-      final List<Order> allOrders = rawList.map((json) => Order.fromJson(json as Map<String, dynamic>)).toList();
+      final List<m.Order> allOrders = rawList.map((json) => m.Order.fromJson(json as Map<String, dynamic>)).toList();
       final now = DateTime.now();
 
       // Filter orders by requested duration
@@ -182,7 +252,7 @@ String _resolveStaffName(String? staffId) {
   return 'Field Staff (Sales)';
 }
 
-List<Map<String, dynamic>> _buildDynamicTrendData(List<Order> orders, String duration, DateTime now) {
+List<Map<String, dynamic>> _buildDynamicTrendData(List<m.Order> orders, String duration, DateTime now) {
     if (duration == 'today') {
       final buckets = <String, double>{
         '8 AM': 0.0,

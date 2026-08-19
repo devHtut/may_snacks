@@ -102,6 +102,30 @@ class PhysicalAudits extends Table {
   Set<Column> get primaryKey => {id};
 }
 
+class ReservedStocks extends Table {
+  TextColumn get id => text()();
+  TextColumn get orderId => text()();
+  TextColumn get productId => text()();
+  TextColumn get batchId => text().nullable()();
+  IntColumn get quantity => integer()();
+  TextColumn get status => text()();
+  DateTimeColumn get createdAt => dateTime()();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
+class AuditLogs extends Table {
+  TextColumn get id => text()();
+  TextColumn get actorId => text().nullable()();
+  TextColumn get action => text()();
+  TextColumn get description => text()();
+  DateTimeColumn get createdAt => dateTime()();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
 class Mutations extends Table {
   IntColumn get id => integer().autoIncrement()();
   TextColumn get actionType => text()();
@@ -118,13 +142,29 @@ class Mutations extends Table {
   Customers,
   Disposals,
   PhysicalAudits,
+  ReservedStocks,
+  AuditLogs,
   Mutations,
 ])
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 3;
+
+  @override
+  MigrationStrategy get migration {
+    return MigrationStrategy(
+      onCreate: (Migrator m) async {
+        await m.createAll();
+      },
+      onUpgrade: (Migrator m, int from, int to) async {
+        if (from < 2) {
+          await m.createTable(reservedStocks);
+        }
+      },
+    );
+  }
 }
 
 QueryExecutor _openConnection() {
