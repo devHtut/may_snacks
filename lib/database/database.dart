@@ -5,7 +5,7 @@ import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
-import 'package:sqlite3/open.dart';
+import 'package:sqlite3/sqlite3.dart';
 
 import '../services/sync_manager.dart';
 
@@ -181,7 +181,7 @@ class AppDatabase extends _$AppDatabase {
 QueryExecutor _openConnection() {
   return LazyDatabase(() async {
     if (Platform.isMacOS) {
-      open.overrideFor(OperatingSystem.macOS, () {
+      sqlite3.open.overrideFor(OperatingSystem.macOS, () {
         try {
           return DynamicLibrary.open('libsqlite3.dylib');
         } catch (_) {
