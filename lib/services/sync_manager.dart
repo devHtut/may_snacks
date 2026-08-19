@@ -141,13 +141,22 @@ class SyncManager extends ChangeNotifier {
 
           try {
             if (mutation.actionType == 'INSERT') {
-              final response = await _client
-                  .from(mutation.remoteTable)
-                  .upsert(payload)
-                  .select('id')
-                  .single();
+              dynamic response;
+              try {
+                response = await _client
+                    .from(mutation.remoteTable)
+                    .insert(payload)
+                    .select('id')
+                    .maybeSingle();
+              } catch (_) {
+                response = await _client
+                    .from(mutation.remoteTable)
+                    .upsert(payload)
+                    .select('id')
+                    .maybeSingle();
+              }
               
-              final serverId = response['id']?.toString();
+              final serverId = response?['id']?.toString();
               final clientId = payload['id']?.toString();
               
               if (clientId != null && serverId != null && clientId != serverId) {
@@ -158,7 +167,7 @@ class SyncManager extends ChangeNotifier {
               if (id != null) {
                 final updatePayload = Map<String, dynamic>.from(payload)
                   ..remove('id')
-                  ..remove('created_at'); // Usually shouldn't update created_at
+                  ..remove('created_at');
                 await _client.from(mutation.remoteTable).update(updatePayload).eq('id', id);
               } else {
                 throw Exception('Missing id in payload for UPDATE action on ${mutation.remoteTable}');
@@ -174,18 +183,18 @@ class SyncManager extends ChangeNotifier {
             await (_db.delete(_db.mutations)..where((t) => t.id.equals(mutation.id))).go();
             debugPrint('[SyncManager] Synced mutation #${mutation.id} (${mutation.actionType} on ${mutation.remoteTable})');
           } on PostgrestException catch (e) {
-            debugPrint('[SyncManager] PostgrestException on mutation #${mutation.id}: $e');
+            debugPrint('[SyncManager] PostgrestException on mutation #${mutation.id} (${mutation.remoteTable}): $e');
             
             if (_isNetworkError(e.message)) {
               rethrow;
             } else {
               await (_db.delete(_db.mutations)..where((t) => t.id.equals(mutation.id))).go();
-              debugPrint('[SyncManager] Fatal error. Discarded mutation #${mutation.id}.');
+              debugPrint('[SyncManager] Non-network RLS/Server error on ${mutation.remoteTable}. Discarded mutation #${mutation.id}. Continuing queue processing...');
             }
           } catch (e) {
             debugPrint('[SyncManager] General error on mutation #${mutation.id}: $e');
             await (_db.delete(_db.mutations)..where((t) => t.id.equals(mutation.id))).go();
-            debugPrint('[SyncManager] Discarded problematic mutation #${mutation.id}.');
+            debugPrint('[SyncManager] Discarded problematic mutation #${mutation.id}. Continuing queue processing...');
           }
         }
 
