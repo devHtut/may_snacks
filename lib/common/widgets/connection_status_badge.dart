@@ -59,11 +59,11 @@ class _ConnectionStatusBadgeState extends State<ConnectionStatusBadge> {
     if (isSyncing) {
       badgeColor = Colors.blue;
       badgeIcon = Icons.sync_rounded;
-      badgeText = _pendingCount > 0 ? 'Syncing ($_pendingCount)' : 'Syncing';
+      badgeText = 'Syncing';
     } else if (!isOnline) {
       badgeColor = Colors.orange;
       badgeIcon = Icons.wifi_off_rounded;
-      badgeText = _pendingCount > 0 ? 'Offline ($_pendingCount)' : 'Offline';
+      badgeText = 'Offline';
     }
 
     return Tooltip(
