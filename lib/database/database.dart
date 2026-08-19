@@ -162,6 +162,15 @@ class AppDatabase extends _$AppDatabase {
         if (from < 2) {
           await m.createTable(reservedStocks);
         }
+        if (from < 3) {
+          await m.createTable(auditLogs);
+        }
+      },
+      beforeOpen: (details) async {
+        final m = createMigrator();
+        try {
+          await m.createTable(auditLogs);
+        } catch (_) {}
       },
     );
   }
