@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:uuid/uuid.dart';
@@ -102,10 +103,26 @@ class SupabaseWarehouseService implements WarehouseService {
   Future<void> _syncCustomersDown() async {
     try {
       final response = await _client.from('customers').select();
+      final pendingMutations = await _db.select(_db.mutations).get();
+      final Set<String> pendingCustomerIds = {};
+      for (final m in pendingMutations) {
+        if (m.remoteTable == 'customers') {
+          try {
+            final payload = jsonDecode(m.payload) as Map<String, dynamic>;
+            if (payload['id'] != null) {
+              pendingCustomerIds.add(payload['id'].toString());
+            }
+          } catch (_) {}
+        }
+      }
+
       await _db.transaction(() async {
         for (final row in response as List) {
+          final id = row['id'].toString();
+          if (pendingCustomerIds.contains(id)) continue;
+
           await _db.into(_db.customers).insertOnConflictUpdate(CustomersCompanion.insert(
-            id: row['id'],
+            id: id,
             name: row['name'],
             region: row['region'] ?? '',
             township: row['township'] ?? '',
@@ -125,15 +142,31 @@ class SupabaseWarehouseService implements WarehouseService {
   Future<void> _syncOrdersDown() async {
     try {
       final response = await _client.from('orders').select('*, order_items(*)');
+      final pendingMutations = await _db.select(_db.mutations).get();
+      final Set<String> pendingOrderIds = {};
+      for (final m in pendingMutations) {
+        if (m.remoteTable == 'orders') {
+          try {
+            final payload = jsonDecode(m.payload) as Map<String, dynamic>;
+            if (payload['id'] != null) {
+              pendingOrderIds.add(payload['id'].toString());
+            }
+          } catch (_) {}
+        }
+      }
+
       await _db.transaction(() async {
         for (final row in response as List) {
+          final id = row['id'].toString();
+          if (pendingOrderIds.contains(id)) continue;
+
           await _db.into(_db.orders).insertOnConflictUpdate(OrdersCompanion.insert(
-            id: row['id'],
+            id: id,
             customerName: row['customer_name'],
             customerId: drift.Value(row['customer_id']),
             status: row['status'] ?? 'pending',
             salesStaffId: drift.Value(row['sales_staff_id']),
-            createdAt: DateTime.parse(row['created_at']),
+            createdAt: DateTime.parse(row['created_at']).toUtc(),
           ));
           final items = row['order_items'] as List?;
           if (items != null) {
@@ -158,8 +191,26 @@ class SupabaseWarehouseService implements WarehouseService {
   Future<void> _syncReservedStocksDown() async {
     try {
       final response = await _client.from('reserved_stocks').select();
+      final List responseList = response as List;
+      final Set<String> serverIds = responseList.map((row) => row['id'].toString()).toSet();
+
+      final pendingMutations = await _db.select(_db.mutations).get();
+      final Set<String> pendingReservedIds = {};
+      for (final m in pendingMutations) {
+        if (m.remoteTable == 'reserved_stocks') {
+          try {
+            final payload = jsonDecode(m.payload) as Map<String, dynamic>;
+            if (payload['id'] != null) {
+              pendingReservedIds.add(payload['id'].toString());
+            }
+          } catch (_) {}
+        }
+      }
+
+      final Set<String> validIds = {...serverIds, ...pendingReservedIds};
+
       await _db.transaction(() async {
-        for (final row in response as List) {
+        for (final row in responseList) {
           await _db.into(_db.reservedStocks).insertOnConflictUpdate(ReservedStocksCompanion.insert(
             id: row['id'],
             orderId: row['order_id'],
@@ -169,6 +220,10 @@ class SupabaseWarehouseService implements WarehouseService {
             status: row['status'] ?? 'active',
             createdAt: DateTime.parse(row['created_at']),
           ));
+        }
+
+        if (validIds.isNotEmpty) {
+          await (_db.delete(_db.reservedStocks)..where((t) => t.id.isNotIn(validIds))).go();
         }
       });
     } on PostgrestException catch (e) {
@@ -298,7 +353,7 @@ class SupabaseWarehouseService implements WarehouseService {
     required List<m.OrderItem> items,
   }) async {
     final orderId = _uuid.v4();
-    final now = DateTime.now();
+    final now = DateTime.now().toUtc();
 
     // 1. Save to local SQLite
     await _db.into(_db.orders).insert(OrdersCompanion.insert(
@@ -332,6 +387,8 @@ class SupabaseWarehouseService implements WarehouseService {
       ));
     }
 
+    final List<Map<String, dynamic>> reservedStockPayloads = [];
+
     for (final item in populatedItems) {
       final reservedId = _uuid.v4();
       await _db.into(_db.reservedStocks).insert(ReservedStocksCompanion.insert(
@@ -342,8 +399,18 @@ class SupabaseWarehouseService implements WarehouseService {
         status: 'active',
         createdAt: now,
       ));
+
+      reservedStockPayloads.add({
+        'id': reservedId,
+        'order_id': orderId,
+        'product_id': item.productId,
+        'quantity': item.quantity,
+        'status': 'active',
+        'created_at': now.toIso8601String(),
+      });
     }
 
+    // 1. Queue Parent 'orders' mutation FIRST (so FK exists on Supabase when child tables sync)
     await _sync.queueMutation(
       actionType: 'INSERT',
       tableName: 'orders',
@@ -357,6 +424,7 @@ class SupabaseWarehouseService implements WarehouseService {
       },
     );
 
+    // 2. Queue Child 'order_items' mutation SECOND
     for (final item in populatedItems) {
       await _sync.queueMutation(
         actionType: 'INSERT',
@@ -370,17 +438,14 @@ class SupabaseWarehouseService implements WarehouseService {
           'product_price': item.productPrice,
         },
       );
+    }
 
+    // 3. Queue Child 'reserved_stocks' mutation THIRD (after parent orders exists on Supabase)
+    for (final payload in reservedStockPayloads) {
       await _sync.queueMutation(
         actionType: 'INSERT',
         tableName: 'reserved_stocks',
-        payload: {
-          'order_id': orderId,
-          'product_id': item.productId,
-          'quantity': item.quantity,
-          'status': 'active',
-          'created_at': now.toIso8601String(),
-        },
+        payload: payload,
       );
     }
 
@@ -499,6 +564,7 @@ class SupabaseWarehouseService implements WarehouseService {
 
   @override
   Future<void> cancelOrder(String orderId) async {
+    final reservedRows = await (_db.select(_db.reservedStocks)..where((t) => t.orderId.equals(orderId))).get();
     await (_db.update(_db.reservedStocks)..where((t) => t.orderId.equals(orderId)))
         .write(const ReservedStocksCompanion(status: drift.Value('released')));
     await (_db.update(_db.orders)..where((t) => t.id.equals(orderId)))
@@ -509,6 +575,14 @@ class SupabaseWarehouseService implements WarehouseService {
       tableName: 'orders',
       payload: {'id': orderId, 'status': 'cancelled'},
     );
+
+    for (final r in reservedRows) {
+      await _sync.queueMutation(
+        actionType: 'UPDATE',
+        tableName: 'reserved_stocks',
+        payload: {'id': r.id, 'status': 'released'},
+      );
+    }
   }
 
   @override

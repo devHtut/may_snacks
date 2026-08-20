@@ -15,6 +15,16 @@ class _SystemLogsTabState extends State<SystemLogsTab> {
   String _searchQuery = '';
   String _selectedRoleFilter = 'ALL'; // 'ALL', 'SALES', 'MANAGER', 'ADMIN'
 
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        context.read<AdminController>().loadAllAdminData();
+      }
+    });
+  }
+
   String _getRoleKey(AuditLog log) {
     final actor = (log.actorName ?? '').toLowerCase();
     final action = log.action.toLowerCase();

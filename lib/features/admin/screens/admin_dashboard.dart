@@ -104,6 +104,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                 _selectedIndex = index;
               });
               context.read<WarehouseController>().loadAllWarehouseData();
+              context.read<AdminController>().loadAllAdminData();
             },
             labelType: isWide
                 ? NavigationRailLabelType.none
