@@ -89,6 +89,8 @@ class _OrderHistoryTabState extends State<OrderHistoryTab> {
       filteredOrders = processedOrders.where((o) => o.status == OrderStatus.packed).toList();
     } else if (_filter == 'delivered') {
       filteredOrders = processedOrders.where((o) => o.status == OrderStatus.delivered).toList();
+    } else if (_filter == 'cancelled') {
+      filteredOrders = processedOrders.where((o) => o.status == OrderStatus.cancelled).toList();
     }
 
     // Apply search filter
@@ -162,6 +164,13 @@ class _OrderHistoryTabState extends State<OrderHistoryTab> {
                   selected: _filter == 'delivered',
                   onSelected: (selected) {
                     setState(() => _filter = 'delivered');
+                  },
+                ),
+                FilterChip(
+                  label: const Text('Cancelled'),
+                  selected: _filter == 'cancelled',
+                  onSelected: (selected) {
+                    setState(() => _filter = 'cancelled');
                   },
                 ),
               ],
