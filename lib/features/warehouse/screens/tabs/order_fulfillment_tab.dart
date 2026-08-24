@@ -39,7 +39,10 @@ class _OrderFulfillmentTabState extends State<OrderFulfillmentTab> {
               Text('Fulfillment Failed'),
             ],
           ),
-          content: Text(controller.errorMessage ?? 'An error occurred during FEFO allocation.'),
+          content: Text(
+            controller.errorMessage ??
+                'An error occurred during FEFO allocation.',
+          ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
@@ -62,7 +65,9 @@ class _OrderFulfillmentTabState extends State<OrderFulfillmentTab> {
             Text('Cancel / Reject Order'),
           ],
         ),
-        content: Text('Are you sure you want to cancel order for "${order.customerName}"? Reserved stock will be released back to inventory.'),
+        content: Text(
+          'Are you sure you want to cancel order for "${order.customerName}"? Reserved stock will be released back to inventory.',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -70,7 +75,10 @@ class _OrderFulfillmentTabState extends State<OrderFulfillmentTab> {
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
             child: const Text('Yes, Cancel Order'),
           ),
         ],
@@ -85,7 +93,9 @@ class _OrderFulfillmentTabState extends State<OrderFulfillmentTab> {
     if (success && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Order has been cancelled and reserved stock released.'),
+          content: Text(
+            'Order has been cancelled and reserved stock released.',
+          ),
           backgroundColor: Colors.orange,
         ),
       );
@@ -106,7 +116,9 @@ class _OrderFulfillmentTabState extends State<OrderFulfillmentTab> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final controller = context.watch<WarehouseController>();
-    final pendingOrders = controller.orders.where((o) => o.status == OrderStatus.pending).toList();
+    final pendingOrders = controller.orders
+        .where((o) => o.status == OrderStatus.pending)
+        .toList();
     final isLoading = controller.isLoading;
 
     if (pendingOrders.isEmpty) {
@@ -115,7 +127,11 @@ class _OrderFulfillmentTabState extends State<OrderFulfillmentTab> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(Icons.playlist_add_check_rounded, size: 64, color: Colors.green),
+              Icon(
+                Icons.playlist_add_check_rounded,
+                size: 64,
+                color: Colors.green,
+              ),
               SizedBox(height: 16),
               Text(
                 'All orders packed! No pending orders.',
@@ -161,17 +177,25 @@ class _OrderFulfillmentTabState extends State<OrderFulfillmentTab> {
                         child: Text(
                           order.customerName,
                           style: TextStyle(
-                            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                            fontWeight: isSelected
+                                ? FontWeight.bold
+                                : FontWeight.normal,
                           ),
                         ),
                       ),
                       Text(
                         'Pending',
-                        style: TextStyle(fontSize: 11, color: Colors.orange[800], fontWeight: FontWeight.bold),
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: Colors.orange[800],
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ],
                   ),
-                  subtitle: Text('Items Count: ${order.items.length} | Total: ${NumberFormat.currency(symbol: 'Ks ', decimalDigits: 0).format(order.totalAmount)}'),
+                  subtitle: Text(
+                    'Items Count: ${order.items.length} | Total: ${NumberFormat.currency(symbol: 'Ks ', decimalDigits: 0).format(order.totalAmount)}',
+                  ),
                   onTap: () {
                     setState(() {
                       _selectedOrder = order;
@@ -197,7 +221,10 @@ class _OrderFulfillmentTabState extends State<OrderFulfillmentTab> {
                     children: [
                       CircleAvatar(
                         backgroundColor: theme.primaryColor.withOpacity(0.1),
-                        child: Icon(Icons.assignment_rounded, color: theme.primaryColor),
+                        child: Icon(
+                          Icons.assignment_rounded,
+                          color: theme.primaryColor,
+                        ),
                       ),
                       const SizedBox(width: 16),
                       Expanded(
@@ -206,10 +233,14 @@ class _OrderFulfillmentTabState extends State<OrderFulfillmentTab> {
                           children: [
                             Text(
                               activeSelectedOrder.customerName,
-                              style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+                              style: theme.textTheme.titleLarge?.copyWith(
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
                             const SizedBox(height: 4),
-                            Text('Order Date: ${DateFormat('yyyy-MM-dd HH:mm').format(activeSelectedOrder.createdAt)}'),
+                            Text(
+                              'Order Date: ${DateFormat('yyyy-MM-dd HH:mm').format(activeSelectedOrder.createdAt)}',
+                            ),
                           ],
                         ),
                       ),
@@ -218,13 +249,16 @@ class _OrderFulfillmentTabState extends State<OrderFulfillmentTab> {
                   const Divider(height: 24),
                   Text(
                     'Requested Items list',
-                    style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                   const SizedBox(height: 12),
                   Expanded(
                     child: ListView.separated(
                       itemCount: activeSelectedOrder.items.length,
-                      separatorBuilder: (context, index) => const Divider(height: 1),
+                      separatorBuilder: (context, index) =>
+                          const Divider(height: 1),
                       itemBuilder: (context, index) {
                         final item = activeSelectedOrder.items[index];
                         return ListTile(
@@ -232,7 +266,10 @@ class _OrderFulfillmentTabState extends State<OrderFulfillmentTab> {
                           title: Text(item.productName ?? 'Unknown Product'),
                           subtitle: Text('Quantity Ordered: ${item.quantity}'),
                           trailing: Text(
-                            NumberFormat.currency(symbol: 'Ks ', decimalDigits: 0).format((item.productPrice ?? 0) * item.quantity),
+                            NumberFormat.currency(
+                              symbol: 'Ks ',
+                              decimalDigits: 0,
+                            ).format((item.productPrice ?? 0) * item.quantity),
                             style: const TextStyle(fontWeight: FontWeight.bold),
                           ),
                         );
@@ -246,39 +283,66 @@ class _OrderFulfillmentTabState extends State<OrderFulfillmentTab> {
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text('Grand Total Cost', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                          const Text(
+                            'Grand Total Cost',
+                            style: TextStyle(fontSize: 12, color: Colors.grey),
+                          ),
                           const SizedBox(height: 4),
                           Text(
-                            NumberFormat.currency(symbol: 'Ks ', decimalDigits: 0).format(activeSelectedOrder.totalAmount),
-                            style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold, color: theme.primaryColor),
+                            NumberFormat.currency(
+                              symbol: 'Ks ',
+                              decimalDigits: 0,
+                            ).format(activeSelectedOrder.totalAmount),
+                            style: theme.textTheme.titleLarge?.copyWith(
+                              fontWeight: FontWeight.bold,
+                              color: theme.primaryColor,
+                            ),
                           ),
                         ],
                       ),
                       Row(
                         children: [
                           OutlinedButton.icon(
-                            onPressed: isLoading ? null : () => _handleCancel(activeSelectedOrder),
-                            icon: const Icon(Icons.cancel_outlined, color: Colors.red),
-                            label: const Text('Cancel Order', style: TextStyle(color: Colors.red)),
+                            onPressed: isLoading
+                                ? null
+                                : () => _handleCancel(activeSelectedOrder),
+
+                            label: const Text(
+                              'Cancel Order',
+                              style: TextStyle(color: Colors.red),
+                            ),
                             style: OutlinedButton.styleFrom(
                               foregroundColor: Colors.red,
                               side: const BorderSide(color: Colors.red),
-                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 16,
+                              ),
                             ),
                           ),
                           const SizedBox(width: 12),
                           ElevatedButton.icon(
-                            onPressed: isLoading ? null : () => _handleFulfill(activeSelectedOrder.id),
+                            onPressed: isLoading
+                                ? null
+                                : () => _handleFulfill(activeSelectedOrder.id),
                             icon: isLoading
                                 ? const SizedBox(
                                     width: 20,
                                     height: 20,
-                                    child: CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation<Color>(Colors.white)),
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      valueColor: AlwaysStoppedAnimation<Color>(
+                                        Colors.white,
+                                      ),
+                                    ),
                                   )
                                 : const Icon(Icons.inventory_2_rounded),
                             label: const Text('Fulfill & Pack Order (FEFO)'),
                             style: ElevatedButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 24,
+                                vertical: 16,
+                              ),
                             ),
                           ),
                         ],

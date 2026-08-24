@@ -13,6 +13,7 @@ abstract class AdminService {
   Future<void> logEvent(String action, String description, {String? actorName});
   Future<m.Product> addProduct(String name, String sku, double price);
   Future<void> updateProductPrice(String productId, double newPrice);
+  Future<void> deleteProduct(String productId);
   Future<void> approveDisposal(String disposalId);
   Future<void> rejectDisposal(String disposalId);
   Future<Map<String, dynamic>> fetchSalesAnalytics({String duration = 'month'});
@@ -131,6 +132,21 @@ class SupabaseAdminService implements AdminService {
         
     final product = m.Product.fromJson(response);
     await logEvent('PRICE_UPDATED', 'Updated wholesale price of ${product.name} to $newPrice.');
+  }
+
+  @override
+  Future<void> deleteProduct(String productId) async {
+    await (_db.delete(_db.products)..where((t) => t.id.equals(productId))).go();
+    try {
+      await _client.from('products').delete().eq('id', productId);
+    } catch (_) {}
+
+    await _sync.queueMutation(
+      actionType: 'DELETE',
+      tableName: 'products',
+      payload: {'id': productId},
+    );
+    await logEvent('PRODUCT_DELETED', 'Deleted unused product from catalog (ID: $productId).');
   }
 
   @override

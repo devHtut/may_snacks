@@ -142,6 +142,25 @@ class AdminController extends ChangeNotifier {
     }
   }
 
+  Future<bool> deleteProduct(String productId) async {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      await _adminService.deleteProduct(productId);
+      _auditLogs = await _adminService.fetchAuditLogs();
+      _isLoading = false;
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _errorMessage = ErrorHandler.toUserFriendlyMessage(e);
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    }
+  }
+
   Future<bool> approveDisposalRequest(String disposalId) async {
     _isLoading = true;
     _errorMessage = null;

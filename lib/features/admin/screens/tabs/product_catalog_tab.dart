@@ -87,16 +87,15 @@ class _ProductCatalogTabState extends State<ProductCatalogTab> {
 
                 if (success && mounted) {
                   Navigator.pop(context);
-                  // Reload catalogs in both controllers to sync lists
-                  await warehouseController.loadAllWarehouseData();
-                  await controller.loadAllAdminData();
-                  
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
                       content: Text('Product added successfully to catalog.'),
                       backgroundColor: Colors.green,
                     ),
                   );
+                  // Reload catalogs in both controllers to sync lists
+                  await warehouseController.loadAllWarehouseData();
+                  await controller.loadAllAdminData();
                 } else if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
@@ -165,15 +164,14 @@ class _ProductCatalogTabState extends State<ProductCatalogTab> {
 
                 if (success && mounted) {
                   Navigator.pop(context);
-                  await warehouseController.loadAllWarehouseData();
-                  await controller.loadAllAdminData();
-
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
                       content: Text('Wholesale price updated successfully.'),
                       backgroundColor: Colors.green,
                     ),
                   );
+                  await warehouseController.loadAllWarehouseData();
+                  await controller.loadAllAdminData();
                 } else if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
@@ -189,6 +187,90 @@ class _ProductCatalogTabState extends State<ProductCatalogTab> {
         );
       },
     );
+  }
+
+  void _handleDeleteProduct(Product product) async {
+    final controller = context.read<AdminController>();
+    final warehouseController = context.read<WarehouseController>();
+
+    final batches = warehouseController.batches;
+    final orders = warehouseController.orders;
+    final disposals = warehouseController.disposals;
+    final audits = warehouseController.audits;
+
+    final hasBatches = batches.any((b) => b.productId == product.id);
+    final hasOrders = orders.any((o) => o.items.any((i) => i.productId == product.id));
+    final hasDisposals = disposals.any((d) => d.productId == product.id);
+    final hasAudits = audits.any((a) => a.productId == product.id);
+
+    if (hasBatches || hasOrders || hasDisposals || hasAudits) {
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Row(
+            children: [
+              Icon(Icons.warning_amber_rounded, color: Colors.orange),
+              SizedBox(width: 8),
+              Text('Cannot Delete Product'),
+            ],
+          ),
+          content: Text('Product "${product.name}" is linked to existing stock batches or wholesale orders history. Products with active/historical records cannot be deleted to preserve system audit logs.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('OK'),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
+
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.delete_forever_rounded, color: Colors.red),
+            SizedBox(width: 8),
+            Text('Delete Product'),
+          ],
+        ),
+        content: Text('Are you sure you want to permanently delete "${product.name}" (${product.sku})? This product has no stock or order history and will be removed from catalog.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true || !mounted) return;
+
+    final success = await controller.deleteProduct(product.id);
+    if (success && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Product "${product.name}" deleted from catalog.'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      await warehouseController.loadAllWarehouseData();
+      await controller.loadAllAdminData();
+    } else if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(controller.errorMessage ?? 'Failed to delete product.'),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
+    }
   }
 
   @override
@@ -253,6 +335,11 @@ class _ProductCatalogTabState extends State<ProductCatalogTab> {
                               icon: const Icon(Icons.edit_note_rounded, size: 24),
                               tooltip: 'Edit Price',
                               onPressed: () => _showEditPriceDialog(product),
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.delete_outline_rounded, size: 24, color: Colors.redAccent),
+                              tooltip: 'Delete Product',
+                              onPressed: () => _handleDeleteProduct(product),
                             ),
                           ],
                         ),
