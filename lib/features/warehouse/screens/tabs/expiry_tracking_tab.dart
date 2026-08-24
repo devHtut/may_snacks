@@ -11,14 +11,16 @@ class ExpiryTrackingTab extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final controller = context.watch<WarehouseController>();
-    final batches = controller.batches;
+    final activeBatches = controller.batches.where((b) => b.quantity > 0).toList();
     final products = controller.products;
 
-    final expiredBatches = batches.where((b) => b.isExpired).toList()
+    final expiredBatches = activeBatches.where((b) => b.isExpired).toList()
       ..sort((a, b) => a.expiryDate.compareTo(b.expiryDate));
 
-    final expiringSoonBatches = batches.where((b) => !b.isExpired && b.daysUntilExpiry <= 30).toList()
+    final expiringSoonBatches = activeBatches.where((b) => !b.isExpired && b.daysUntilExpiry <= 30).toList()
       ..sort((a, b) => a.expiryDate.compareTo(b.expiryDate));
+
+    final safeBatchesCount = activeBatches.length - expiredBatches.length - expiringSoonBatches.length;
 
     return SingleChildScrollView(
       child: Column(
@@ -50,7 +52,7 @@ class ExpiryTrackingTab extends StatelessWidget {
               Expanded(
                 child: _buildMetricCard(
                   title: 'Safe Batches (> 30d)',
-                  count: batches.length - expiredBatches.length - expiringSoonBatches.length,
+                  count: safeBatchesCount,
                   icon: Icons.check_circle_rounded,
                   color: Colors.green,
                   context: context,
