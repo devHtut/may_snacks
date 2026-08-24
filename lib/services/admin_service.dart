@@ -110,28 +110,68 @@ class SupabaseAdminService implements AdminService {
 
   @override
   Future<m.Product> addProduct(String name, String sku, double price) async {
-    final response = await _client.from('products').insert({
-      'name': name,
-      'sku': sku,
-      'price': price,
-    }).select().single();
-    
-    final product = m.Product.fromJson(response);
-    await logEvent('PRODUCT_CREATED', 'Added product ${product.name} (SKU: ${product.sku}) with price ${product.price}.');
-    return product;
+    final id = _uuid.v4();
+    final now = DateTime.now();
+
+    await _db.into(_db.products).insertOnConflictUpdate(ProductsCompanion.insert(
+      id: id,
+      name: name,
+      sku: sku,
+      price: price,
+      createdAt: now,
+    ));
+
+    try {
+      final response = await _client.from('products').insert({
+        'id': id,
+        'name': name,
+        'sku': sku,
+        'price': price,
+        'created_at': now.toIso8601String(),
+      }).select().single();
+      final product = m.Product.fromJson(response);
+      await logEvent('PRODUCT_CREATED', 'Added product ${product.name} (SKU: ${product.sku}) with price ${product.price}.');
+      return product;
+    } catch (e) {
+      debugPrint('[AdminService] Direct product insert error, queued offline: $e');
+      await _sync.queueMutation(
+        actionType: 'INSERT',
+        tableName: 'products',
+        payload: {
+          'id': id,
+          'name': name,
+          'sku': sku,
+          'price': price,
+          'created_at': now.toIso8601String(),
+        },
+      );
+      final product = m.Product(id: id, name: name, sku: sku, price: price, createdAt: now);
+      await logEvent('PRODUCT_CREATED', 'Added product ${product.name} (SKU: ${product.sku}) with price ${product.price}.');
+      return product;
+    }
   }
 
   @override
   Future<void> updateProductPrice(String productId, double newPrice) async {
-    final response = await _client
-        .from('products')
-        .update({'price': newPrice})
-        .eq('id', productId)
-        .select()
-        .single();
-        
-    final product = m.Product.fromJson(response);
-    await logEvent('PRICE_UPDATED', 'Updated wholesale price of ${product.name} to $newPrice.');
+    await (_db.update(_db.products)..where((t) => t.id.equals(productId)))
+        .write(ProductsCompanion(price: drift.Value(newPrice)));
+
+    try {
+      await _client
+          .from('products')
+          .update({'price': newPrice})
+          .eq('id', productId);
+    } catch (e) {
+      debugPrint('[AdminService] Direct product price update error: $e');
+    }
+
+    await _sync.queueMutation(
+      actionType: 'UPDATE',
+      tableName: 'products',
+      payload: {'id': productId, 'price': newPrice},
+    );
+
+    await logEvent('PRICE_UPDATED', 'Updated wholesale price of product to $newPrice.');
   }
 
   @override
