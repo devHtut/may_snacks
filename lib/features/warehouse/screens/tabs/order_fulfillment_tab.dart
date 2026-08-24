@@ -51,6 +51,57 @@ class _OrderFulfillmentTabState extends State<OrderFulfillmentTab> {
     }
   }
 
+  Future<void> _handleCancel(Order order) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.cancel_outlined, color: Colors.red),
+            SizedBox(width: 8),
+            Text('Cancel / Reject Order'),
+          ],
+        ),
+        content: Text('Are you sure you want to cancel order for "${order.customerName}"? Reserved stock will be released back to inventory.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('No, Keep Order'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white),
+            child: const Text('Yes, Cancel Order'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true || !mounted) return;
+
+    final controller = context.read<WarehouseController>();
+    final success = await controller.cancelOrder(order.id);
+
+    if (success && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Order has been cancelled and reserved stock released.'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      setState(() {
+        _selectedOrder = null;
+      });
+    } else if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(controller.errorMessage ?? 'Failed to cancel order.'),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -203,19 +254,34 @@ class _OrderFulfillmentTabState extends State<OrderFulfillmentTab> {
                           ),
                         ],
                       ),
-                      ElevatedButton.icon(
-                        onPressed: isLoading ? null : () => _handleFulfill(activeSelectedOrder.id),
-                        icon: isLoading
-                            ? const SizedBox(
-                                width: 20,
-                                height: 20,
-                                child: CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation<Color>(Colors.white)),
-                              )
-                            : const Icon(Icons.inventory_2_rounded),
-                        label: const Text('Fulfill & Pack Order (FEFO)'),
-                        style: ElevatedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-                        ),
+                      Row(
+                        children: [
+                          OutlinedButton.icon(
+                            onPressed: isLoading ? null : () => _handleCancel(activeSelectedOrder),
+                            icon: const Icon(Icons.cancel_outlined, color: Colors.red),
+                            label: const Text('Cancel Order', style: TextStyle(color: Colors.red)),
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: Colors.red,
+                              side: const BorderSide(color: Colors.red),
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          ElevatedButton.icon(
+                            onPressed: isLoading ? null : () => _handleFulfill(activeSelectedOrder.id),
+                            icon: isLoading
+                                ? const SizedBox(
+                                    width: 20,
+                                    height: 20,
+                                    child: CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation<Color>(Colors.white)),
+                                  )
+                                : const Icon(Icons.inventory_2_rounded),
+                            label: const Text('Fulfill & Pack Order (FEFO)'),
+                            style: ElevatedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
