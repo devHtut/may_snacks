@@ -190,6 +190,8 @@ class _StockAuditTabState extends State<StockAuditTab> {
     final theme = Theme.of(context);
     final controller = context.watch<WarehouseController>();
     final audits = controller.audits;
+    final products = controller.products;
+    final batches = controller.batches;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -222,6 +224,25 @@ class _StockAuditTabState extends State<StockAuditTab> {
                   itemBuilder: (context, index) {
                     final item = audits[index];
                     
+                    final product = products.firstWhere(
+                      (p) => p.id == item.productId,
+                      orElse: () => Product(id: '', name: item.productName ?? 'Product', sku: '', price: 0, createdAt: DateTime.now()),
+                    );
+                    final batch = batches.firstWhere(
+                      (b) => b.id == item.batchId,
+                      orElse: () => StockBatch(id: '', productId: '', batchNumber: item.batchNumber ?? 'Unknown', quantity: 0, initialQuantity: 0, expiryDate: DateTime.now(), receivedDate: DateTime.now(), createdAt: DateTime.now()),
+                    );
+
+                    final displayProductName = (item.productName != null && item.productName != 'Product')
+                        ? item.productName!
+                        : product.name;
+                    final displayBatchNumber = (item.batchNumber != null && item.batchNumber != 'Unknown')
+                        ? item.batchNumber!
+                        : batch.batchNumber;
+                    final displayAuditor = (item.auditorName != null && item.auditorName != 'Staff')
+                        ? item.auditorName!
+                        : 'Warehouse Manager';
+
                     final isShortage = item.discrepancy < 0;
                     
                     Color statusColor = Colors.green;
@@ -258,12 +279,12 @@ class _StockAuditTabState extends State<StockAuditTab> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    '${item.productName ?? 'Product'} (Batch: ${item.batchNumber ?? 'Unknown'})',
+                                    '$displayProductName (Batch: $displayBatchNumber)',
                                     style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
                                   ),
                                   const SizedBox(height: 4),
                                   Text(
-                                    'Audited on: ${DateFormat('yyyy-MM-dd HH:mm').format(item.createdAt)} | By: ${item.auditorName ?? 'Staff'}',
+                                    'Audited on: ${DateFormat('yyyy-MM-dd HH:mm').format(item.createdAt)} | By: $displayAuditor',
                                     style: const TextStyle(fontSize: 12, color: Colors.grey),
                                   ),
                                   if (item.notes != null) ...[

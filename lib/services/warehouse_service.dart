@@ -823,16 +823,29 @@ class SupabaseWarehouseService implements WarehouseService {
 
     try {
       final rows = await (_db.select(_db.disposals)..orderBy([(t) => drift.OrderingTerm.desc(t.createdAt)])).get();
-      return rows.map((r) => m.DisposalRequest(
-        id: r.id,
-        productId: r.productId,
-        batchId: r.batchId,
-        quantity: r.quantity,
-        reason: r.reason,
-        status: m.DisposalStatus.fromKey(r.status),
-        requestedBy: r.requestedBy,
-        createdAt: r.createdAt,
-      )).toList();
+      final products = await _db.select(_db.products).get();
+      final batches = await _db.select(_db.batches).get();
+
+      return rows.map((r) {
+        final pList = products.where((p) => p.id == r.productId);
+        final bList = batches.where((b) => b.id == r.batchId);
+        final productName = pList.isNotEmpty ? pList.first.name : null;
+        final batchNumber = bList.isNotEmpty ? bList.first.batchNumber : null;
+
+        return m.DisposalRequest(
+          id: r.id,
+          productId: r.productId,
+          batchId: r.batchId,
+          quantity: r.quantity,
+          reason: r.reason,
+          status: m.DisposalStatus.fromKey(r.status),
+          requestedBy: r.requestedBy,
+          createdAt: r.createdAt,
+          productName: productName,
+          batchNumber: batchNumber,
+          requesterName: 'Warehouse Manager',
+        );
+      }).toList();
     } catch (e) {
       debugPrint('[WarehouseService] Error reading local disposals: $e');
       return [];
@@ -849,6 +862,11 @@ class SupabaseWarehouseService implements WarehouseService {
     final id = _uuid.v4();
     final now = DateTime.now();
     final currentUser = _client.auth.currentUser;
+
+    final pRows = await (_db.select(_db.products)..where((t) => t.id.equals(productId))).get();
+    final bRows = await (_db.select(_db.batches)..where((t) => t.id.equals(batchId))).get();
+    final productName = pRows.isNotEmpty ? pRows.first.name : null;
+    final batchNumber = bRows.isNotEmpty ? bRows.first.batchNumber : null;
 
     await _db.into(_db.disposals).insert(DisposalsCompanion.insert(
       id: id,
@@ -885,6 +903,9 @@ class SupabaseWarehouseService implements WarehouseService {
       status: m.DisposalStatus.pending,
       requestedBy: currentUser?.id,
       createdAt: now,
+      productName: productName,
+      batchNumber: batchNumber,
+      requesterName: 'Warehouse Manager',
     );
   }
 
@@ -894,17 +915,30 @@ class SupabaseWarehouseService implements WarehouseService {
 
     try {
       final rows = await (_db.select(_db.physicalAudits)..orderBy([(t) => drift.OrderingTerm.desc(t.createdAt)])).get();
-      return rows.map((r) => m.PhysicalAudit(
-        id: r.id,
-        productId: r.productId,
-        batchId: r.batchId,
-        systemQuantity: r.systemQuantity,
-        physicalQuantity: r.physicalQuantity,
-        discrepancy: r.discrepancy,
-        notes: r.notes,
-        auditedBy: r.auditedBy,
-        createdAt: r.createdAt,
-      )).toList();
+      final products = await _db.select(_db.products).get();
+      final batches = await _db.select(_db.batches).get();
+
+      return rows.map((r) {
+        final pList = products.where((p) => p.id == r.productId);
+        final bList = batches.where((b) => b.id == r.batchId);
+        final productName = pList.isNotEmpty ? pList.first.name : null;
+        final batchNumber = bList.isNotEmpty ? bList.first.batchNumber : null;
+
+        return m.PhysicalAudit(
+          id: r.id,
+          productId: r.productId,
+          batchId: r.batchId,
+          systemQuantity: r.systemQuantity,
+          physicalQuantity: r.physicalQuantity,
+          discrepancy: r.discrepancy,
+          notes: r.notes,
+          auditedBy: r.auditedBy,
+          createdAt: r.createdAt,
+          productName: productName,
+          batchNumber: batchNumber,
+          auditorName: 'Warehouse Manager',
+        );
+      }).toList();
     } catch (e) {
       debugPrint('[WarehouseService] Error reading local physicalAudits: $e');
       return [];
@@ -923,6 +957,11 @@ class SupabaseWarehouseService implements WarehouseService {
     final now = DateTime.now();
     final currentUser = _client.auth.currentUser;
     final discrepancy = physicalQuantity - systemQuantity;
+
+    final pRows = await (_db.select(_db.products)..where((t) => t.id.equals(productId))).get();
+    final bRows = await (_db.select(_db.batches)..where((t) => t.id.equals(batchId))).get();
+    final productName = pRows.isNotEmpty ? pRows.first.name : null;
+    final batchNumber = bRows.isNotEmpty ? bRows.first.batchNumber : null;
 
     await _db.into(_db.physicalAudits).insert(PhysicalAuditsCompanion.insert(
       id: id,
@@ -962,6 +1001,9 @@ class SupabaseWarehouseService implements WarehouseService {
       notes: notes,
       auditedBy: currentUser?.id,
       createdAt: now,
+      productName: productName,
+      batchNumber: batchNumber,
+      auditorName: 'Warehouse Manager',
     );
   }
 }

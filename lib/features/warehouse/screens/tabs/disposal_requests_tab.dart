@@ -186,6 +186,8 @@ class _DisposalRequestsTabState extends State<DisposalRequestsTab> {
     final theme = Theme.of(context);
     final controller = context.watch<WarehouseController>();
     final disposals = controller.disposals;
+    final products = controller.products;
+    final batches = controller.batches;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -218,6 +220,22 @@ class _DisposalRequestsTabState extends State<DisposalRequestsTab> {
                   itemBuilder: (context, index) {
                     final item = disposals[index];
 
+                    final product = products.firstWhere(
+                      (p) => p.id == item.productId,
+                      orElse: () => Product(id: '', name: item.productName ?? 'Product', sku: '', price: 0, createdAt: DateTime.now()),
+                    );
+                    final batch = batches.firstWhere(
+                      (b) => b.id == item.batchId,
+                      orElse: () => StockBatch(id: '', productId: '', batchNumber: item.batchNumber ?? 'Unknown', quantity: 0, initialQuantity: 0, expiryDate: DateTime.now(), receivedDate: DateTime.now(), createdAt: DateTime.now()),
+                    );
+
+                    final displayProductName = (item.productName != null && item.productName != 'Product')
+                        ? item.productName!
+                        : product.name;
+                    final displayBatchNumber = (item.batchNumber != null && item.batchNumber != 'Unknown')
+                        ? item.batchNumber!
+                        : batch.batchNumber;
+
                     Color statusColor = Colors.orange;
                     IconData statusIcon = Icons.hourglass_empty_rounded;
 
@@ -249,7 +267,7 @@ class _DisposalRequestsTabState extends State<DisposalRequestsTab> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    '${item.productName ?? 'Product'} (Batch: ${item.batchNumber ?? 'Unknown'})',
+                                    '$displayProductName (Batch: $displayBatchNumber)',
                                     style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
                                   ),
                                   const SizedBox(height: 4),
