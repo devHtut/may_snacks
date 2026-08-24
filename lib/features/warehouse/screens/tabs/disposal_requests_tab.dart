@@ -37,7 +37,7 @@ class _DisposalRequestsTabState extends State<DisposalRequestsTab> {
 
     setState(() {
       _selectedProduct = products.first;
-      final productBatches = batches.where((b) => b.productId == _selectedProduct?.id).toList();
+      final productBatches = batches.where((b) => b.productId == _selectedProduct?.id && b.quantity > 0).toList();
       _selectedBatch = productBatches.isNotEmpty ? productBatches.first : null;
       _quantityController.clear();
       _reasonController.clear();
@@ -49,7 +49,7 @@ class _DisposalRequestsTabState extends State<DisposalRequestsTab> {
       builder: (context) {
         return StatefulBuilder(
           builder: (context, setDialogState) {
-            final dialogBatches = batches.where((b) => b.productId == _selectedProduct?.id).toList();
+            final dialogBatches = batches.where((b) => b.productId == _selectedProduct?.id && b.quantity > 0).toList();
 
             return AlertDialog(
               title: const Text('New Disposal Request'),
@@ -72,7 +72,7 @@ class _DisposalRequestsTabState extends State<DisposalRequestsTab> {
                           if (val != null) {
                             setDialogState(() {
                               _selectedProduct = val;
-                              final productBatches = batches.where((b) => b.productId == val.id).toList();
+                              final productBatches = batches.where((b) => b.productId == val.id && b.quantity > 0).toList();
                               _selectedBatch = productBatches.isNotEmpty ? productBatches.first : null;
                             });
                           }

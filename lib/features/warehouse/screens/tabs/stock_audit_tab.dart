@@ -36,7 +36,7 @@ class _StockAuditTabState extends State<StockAuditTab> {
 
     setState(() {
       _selectedProduct = products.first;
-      final productBatches = batches.where((b) => b.productId == _selectedProduct?.id).toList();
+      final productBatches = batches.where((b) => b.productId == _selectedProduct?.id && b.quantity > 0).toList();
       _selectedBatch = productBatches.isNotEmpty ? productBatches.first : null;
       _physicalQtyController.clear();
       _notesController.clear();
@@ -48,7 +48,7 @@ class _StockAuditTabState extends State<StockAuditTab> {
       builder: (context) {
         return StatefulBuilder(
           builder: (context, setDialogState) {
-            final dialogBatches = batches.where((b) => b.productId == _selectedProduct?.id).toList();
+            final dialogBatches = batches.where((b) => b.productId == _selectedProduct?.id && b.quantity > 0).toList();
 
             return AlertDialog(
               title: const Text('Log Physical Stock Audit'),
@@ -71,7 +71,7 @@ class _StockAuditTabState extends State<StockAuditTab> {
                           if (val != null) {
                             setDialogState(() {
                               _selectedProduct = val;
-                              final productBatches = batches.where((b) => b.productId == val.id).toList();
+                              final productBatches = batches.where((b) => b.productId == val.id && b.quantity > 0).toList();
                               _selectedBatch = productBatches.isNotEmpty ? productBatches.first : null;
                             });
                           }
