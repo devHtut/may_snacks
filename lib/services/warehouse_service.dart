@@ -160,11 +160,17 @@ class SupabaseWarehouseService implements WarehouseService {
           final id = row['id'].toString();
           if (pendingOrderIds.contains(id)) continue;
 
+          final existingOrder = await (_db.select(_db.orders)..where((t) => t.id.equals(id))).getSingleOrNull();
+          String finalStatus = row['status'] ?? 'pending';
+          if (existingOrder != null && existingOrder.status == 'cancelled' && finalStatus == 'pending') {
+            finalStatus = 'cancelled';
+          }
+
           await _db.into(_db.orders).insertOnConflictUpdate(OrdersCompanion.insert(
             id: id,
             customerName: row['customer_name'],
             customerId: drift.Value(row['customer_id']),
-            status: row['status'] ?? 'pending',
+            status: finalStatus,
             salesStaffId: drift.Value(row['sales_staff_id']),
             createdAt: DateTime.parse(row['created_at']).toUtc(),
           ));
@@ -570,6 +576,12 @@ class SupabaseWarehouseService implements WarehouseService {
     await (_db.update(_db.orders)..where((t) => t.id.equals(orderId)))
         .write(const OrdersCompanion(status: drift.Value('cancelled')));
 
+    try {
+      await _client.from('orders').update({'status': 'cancelled'}).eq('id', orderId);
+    } catch (e) {
+      debugPrint('[WarehouseService] Direct cancel update error: $e');
+    }
+
     await _sync.queueMutation(
       actionType: 'UPDATE',
       tableName: 'orders',
@@ -582,6 +594,9 @@ class SupabaseWarehouseService implements WarehouseService {
         tableName: 'reserved_stocks',
         payload: {'id': r.id, 'status': 'released'},
       );
+      try {
+        await _client.from('reserved_stocks').update({'status': 'released'}).eq('id', r.id);
+      } catch (_) {}
     }
   }
 
