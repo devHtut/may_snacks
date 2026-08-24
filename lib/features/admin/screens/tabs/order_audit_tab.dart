@@ -98,27 +98,25 @@ class _OrderAuditTabState extends State<OrderAuditTab> {
                           itemBuilder: (context, index) {
                             final order = filteredOrders[index];
                             final isSelected = order.id == activeSelectedOrder?.id;
-
-                            Color statusColor = Colors.orange;
-                            if (order.status == OrderStatus.packed) {
-                              statusColor = Colors.blue;
-                            } else if (order.status == OrderStatus.delivered) {
-                              statusColor = Colors.green;
-                            }
+                            final statusColor = order.status.statusColor;
 
                             return ListTile(
                               selected: isSelected,
                               selectedTileColor: theme.primaryColor.withOpacity(0.05),
                               title: Text(
                                 order.customerName,
-                                style: TextStyle(fontWeight: isSelected ? FontWeight.bold : FontWeight.normal),
+                                style: TextStyle(
+                                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                                  color: order.status == OrderStatus.cancelled ? Colors.red[900] : null,
+                                ),
                               ),
                               subtitle: Text('Items: ${order.items.length} | Revenue: ${NumberFormat.currency(symbol: 'Ks ', decimalDigits: 0).format(order.totalAmount)}'),
                               trailing: Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                                 decoration: BoxDecoration(
-                                  color: statusColor.withOpacity(0.1),
+                                  color: statusColor.withOpacity(0.12),
                                   borderRadius: BorderRadius.circular(6),
+                                  border: Border.all(color: statusColor.withOpacity(0.3), width: 1),
                                 ),
                                 child: Text(
                                   order.status.displayName,
@@ -160,7 +158,28 @@ class _OrderAuditTabState extends State<OrderAuditTab> {
                         const SizedBox(height: 6),
                         Text('Order ID: ${activeSelectedOrder.id}'),
                         Text('Date: ${DateFormat('yyyy-MM-dd HH:mm').format(activeSelectedOrder.createdAt)}'),
-                        Text('Fulfillment Status: ${activeSelectedOrder.status.displayName}'),
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
+                            const Text('Fulfillment Status: '),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: activeSelectedOrder.status.statusColor.withOpacity(0.12),
+                                borderRadius: BorderRadius.circular(6),
+                                border: Border.all(color: activeSelectedOrder.status.statusColor.withOpacity(0.3), width: 1),
+                              ),
+                              child: Text(
+                                activeSelectedOrder.status.displayName,
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: activeSelectedOrder.status.statusColor,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
                         const Divider(height: 24),
                         Text('Ordered Items', style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.bold)),
                         const SizedBox(height: 8),

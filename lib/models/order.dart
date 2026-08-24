@@ -1,3 +1,5 @@
+import 'package:flutter/material.dart';
+
 enum OrderStatus {
   pending,
   packed,
@@ -41,6 +43,19 @@ enum OrderStatus {
         return 'Delivered';
       case OrderStatus.cancelled:
         return 'Cancelled';
+    }
+  }
+
+  Color get statusColor {
+    switch (this) {
+      case OrderStatus.pending:
+        return Colors.orange;
+      case OrderStatus.packed:
+        return Colors.blue;
+      case OrderStatus.delivered:
+        return Colors.green;
+      case OrderStatus.cancelled:
+        return Colors.red;
     }
   }
 }

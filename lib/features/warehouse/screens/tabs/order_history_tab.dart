@@ -189,11 +189,7 @@ class _OrderHistoryTabState extends State<OrderHistoryTab> {
                   separatorBuilder: (context, index) => const SizedBox(height: 10),
                   itemBuilder: (context, index) {
                     final order = filteredOrders[index];
-
-                    Color statusColor = Colors.blue;
-                    if (order.status == OrderStatus.delivered) {
-                      statusColor = Colors.green;
-                    }
+                    final statusColor = order.status.statusColor;
 
                     return Card(
                       margin: EdgeInsets.zero,
