@@ -103,23 +103,30 @@ class SupabaseWarehouseService implements WarehouseService {
   Future<void> _syncCustomersDown() async {
     try {
       final response = await _client.from('customers').select();
+      final responseList = response as List;
+      final Set<String> serverIds = responseList.map((row) => row['id'].toString()).toSet();
+
       final pendingMutations = await _db.select(_db.mutations).get();
       final Set<String> pendingCustomerIds = {};
+      final Set<String> pendingDeleteIds = {};
       for (final m in pendingMutations) {
         if (m.remoteTable == 'customers') {
           try {
             final payload = jsonDecode(m.payload) as Map<String, dynamic>;
             if (payload['id'] != null) {
               pendingCustomerIds.add(payload['id'].toString());
+              if (m.actionType == 'DELETE') {
+                pendingDeleteIds.add(payload['id'].toString());
+              }
             }
           } catch (_) {}
         }
       }
 
       await _db.transaction(() async {
-        for (final row in response as List) {
+        for (final row in responseList) {
           final id = row['id'].toString();
-          if (pendingCustomerIds.contains(id)) continue;
+          if (pendingCustomerIds.contains(id) || pendingDeleteIds.contains(id)) continue;
 
           await _db.into(_db.customers).insertOnConflictUpdate(CustomersCompanion.insert(
             id: id,
@@ -132,6 +139,15 @@ class SupabaseWarehouseService implements WarehouseService {
             createdBy: drift.Value(row['created_by']),
             createdAt: DateTime.parse(row['created_at']),
           ));
+        }
+
+        final localCustomers = await _db.select(_db.customers).get();
+        for (final local in localCustomers) {
+          if (pendingDeleteIds.contains(local.id)) {
+            await (_db.delete(_db.customers)..where((t) => t.id.equals(local.id))).go();
+          } else if (!serverIds.contains(local.id) && !pendingCustomerIds.contains(local.id)) {
+            await (_db.delete(_db.customers)..where((t) => t.id.equals(local.id))).go();
+          }
         }
       });
     } catch (e) {
@@ -620,6 +636,12 @@ class SupabaseWarehouseService implements WarehouseService {
     await (_db.update(_db.customers)..where((t) => t.id.equals(customerId)))
         .write(const CustomersCompanion(status: drift.Value('approved')));
 
+    try {
+      await _client.from('customers').update({'status': 'approved'}).eq('id', customerId);
+    } catch (e) {
+      debugPrint('[WarehouseService] Direct customer approve error: $e');
+    }
+
     await _sync.queueMutation(
       actionType: 'UPDATE',
       tableName: 'customers',
@@ -635,6 +657,12 @@ class SupabaseWarehouseService implements WarehouseService {
     await (_db.update(_db.customers)..where((t) => t.id.equals(customerId)))
         .write(const CustomersCompanion(status: drift.Value('rejected')));
 
+    try {
+      await _client.from('customers').update({'status': 'rejected'}).eq('id', customerId);
+    } catch (e) {
+      debugPrint('[WarehouseService] Direct customer reject error: $e');
+    }
+
     await _sync.queueMutation(
       actionType: 'UPDATE',
       tableName: 'customers',
@@ -648,6 +676,12 @@ class SupabaseWarehouseService implements WarehouseService {
   @override
   Future<void> deleteCustomer(String customerId) async {
     await (_db.delete(_db.customers)..where((t) => t.id.equals(customerId))).go();
+
+    try {
+      await _client.from('customers').delete().eq('id', customerId);
+    } catch (e) {
+      debugPrint('[WarehouseService] Direct customer delete error: $e');
+    }
 
     await _sync.queueMutation(
       actionType: 'DELETE',
