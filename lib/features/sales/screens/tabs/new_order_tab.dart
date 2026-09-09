@@ -4,9 +4,11 @@ import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import 'package:may_snacks/models/product.dart';
 import 'package:may_snacks/models/customer.dart';
+import 'package:may_snacks/models/order.dart';
 import 'package:may_snacks/services/location_service.dart';
 import 'package:may_snacks/features/auth/controllers/auth_controller.dart';
 import 'package:may_snacks/features/warehouse/controllers/warehouse_controller.dart';
+import 'package:may_snacks/features/sales/widgets/receipt_preview_dialog.dart';
 
 class NewOrderTab extends StatefulWidget {
   const NewOrderTab({super.key});
@@ -377,6 +379,133 @@ class _NewOrderTabState extends State<NewOrderTab> {
     );
   }
 
+  void _showOrderSuccessDialog(
+    BuildContext context, {
+    Order? order,
+    Customer? customer,
+    String? staffName,
+  }) {
+    final theme = Theme.of(context);
+    final shortOrderId = order != null
+        ? (order.id.length > 8 ? order.id.substring(0, 8).toUpperCase() : order.id.toUpperCase())
+        : null;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.green.withValues(alpha: 0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.check_circle_rounded,
+                  color: Colors.green,
+                  size: 28,
+                ),
+              ),
+              const SizedBox(width: 12),
+              const Expanded(
+                child: Text(
+                  'Order Placed!',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+              ),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Wholesale order for "${customer?.name ?? "Customer"}" has been successfully recorded.',
+                style: const TextStyle(fontSize: 14),
+              ),
+              const SizedBox(height: 12),
+              if (order != null) ...[
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: theme.primaryColor.withValues(alpha: 0.06),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: theme.primaryColor.withValues(alpha: 0.2)),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text('Invoice #:', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                          Text(
+                            '#$shortOrderId',
+                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text('Total Amount:', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                          Text(
+                            'Ks ${NumberFormat('#,###').format(order.totalAmount)}',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                              color: theme.primaryColor,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text('Items Count:', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                          Text(
+                            '${order.items.length} product(s)',
+                            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ],
+          ),
+          actions: [
+            if (order != null)
+              ElevatedButton.icon(
+                icon: const Icon(Icons.receipt_long_rounded, size: 18),
+                label: const Text('Print Thermal Receipt'),
+                onPressed: () {
+                  Navigator.pop(context);
+                  ReceiptPreviewDialog.show(
+                    context,
+                    order: order,
+                    customer: customer,
+                    staffName: staffName,
+                  );
+                },
+              ),
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Done'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   void _showCartSheet() {
     final warehouseController = context.read<WarehouseController>();
     final authController = context.read<AuthController>();
@@ -622,6 +751,8 @@ class _NewOrderTabState extends State<NewOrderTab> {
                         onPressed: warehouseController.isLoading
                             ? null
                             : () async {
+                                final submittedCustomer = _selectedCustomer;
+                                final staffName = authController.profile?.displayName;
                                 final success = await warehouseController
                                     .submitOrder(
                                       customerName: customerName,
@@ -635,13 +766,17 @@ class _NewOrderTabState extends State<NewOrderTab> {
                                   setState(() {
                                     _selectedCustomer = null;
                                   });
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text(
-                                        'Wholesale order submitted successfully!',
-                                      ),
-                                      backgroundColor: Colors.green,
-                                    ),
+                                  
+                                  // Fetch latest order for receipt printing
+                                  final latestOrder = warehouseController.orders.isNotEmpty
+                                      ? warehouseController.orders.first
+                                      : null;
+
+                                  _showOrderSuccessDialog(
+                                    context,
+                                    order: latestOrder,
+                                    customer: submittedCustomer,
+                                    staffName: staffName,
                                   );
                                 } else if (mounted) {
                                   ScaffoldMessenger.of(context).showSnackBar(

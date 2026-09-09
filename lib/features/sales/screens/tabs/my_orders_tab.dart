@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:may_snacks/models/order.dart';
 import 'package:may_snacks/features/auth/controllers/auth_controller.dart';
 import 'package:may_snacks/features/warehouse/controllers/warehouse_controller.dart';
+import 'package:may_snacks/features/sales/widgets/receipt_preview_dialog.dart';
 
 class MyOrdersTab extends StatelessWidget {
   const MyOrdersTab({super.key});
@@ -57,6 +58,19 @@ class MyOrdersTab extends StatelessWidget {
             ),
           ),
           actions: [
+            TextButton.icon(
+              icon: const Icon(Icons.receipt_long_rounded, size: 18),
+              label: const Text('Print Receipt'),
+              onPressed: () {
+                Navigator.pop(context);
+                final authController = context.read<AuthController>();
+                ReceiptPreviewDialog.show(
+                  context,
+                  order: order,
+                  staffName: authController.profile?.displayName,
+                );
+              },
+            ),
             if (order.status == OrderStatus.pending)
               TextButton(
                 onPressed: () async {
@@ -159,16 +173,33 @@ class MyOrdersTab extends StatelessWidget {
                             ),
                           ],
                         ),
-                        trailing: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: statusColor.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: Text(
-                            order.status.displayName,
-                            style: TextStyle(fontSize: 10, color: statusColor, fontWeight: FontWeight.bold),
-                          ),
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: statusColor.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Text(
+                                order.status.displayName,
+                                style: TextStyle(fontSize: 10, color: statusColor, fontWeight: FontWeight.bold),
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            IconButton(
+                              icon: const Icon(Icons.receipt_long_rounded, color: Colors.grey),
+                              tooltip: 'Print Thermal Receipt',
+                              onPressed: () {
+                                ReceiptPreviewDialog.show(
+                                  context,
+                                  order: order,
+                                  staffName: authController.profile?.displayName,
+                                );
+                              },
+                            ),
+                          ],
                         ),
                       ),
                     );
