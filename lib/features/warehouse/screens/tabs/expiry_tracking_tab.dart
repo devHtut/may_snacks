@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import 'package:may_snacks/models/product.dart';
 import 'package:may_snacks/features/warehouse/controllers/warehouse_controller.dart';
+import 'package:may_snacks/services/excel_export_service.dart';
 
 class ExpiryTrackingTab extends StatelessWidget {
   const ExpiryTrackingTab({super.key});
@@ -27,6 +28,31 @@ class ExpiryTrackingTab extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'FEFO Expiry Tracking & Inventory Monitoring',
+                style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+              ),
+              ElevatedButton.icon(
+                onPressed: () {
+                  ExcelExportService.exportExpiryReport(
+                    batches: controller.batches,
+                    products: products,
+                    context: context,
+                  );
+                },
+                icon: const Icon(Icons.table_chart_rounded, size: 16),
+                label: const Text('Export Expiry Report'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF0F766E),
+                  foregroundColor: Colors.white,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
           // Row of Overview Stats cards
           Row(
             children: [

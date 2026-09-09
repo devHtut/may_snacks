@@ -46,6 +46,9 @@ dependencies:
   pdf: ^3.13.0
   printing: ^5.15.0
   esc_pos_utils_plus: ^2.0.4
+  syncfusion_flutter_xlsio: ^34.2.7
+  share_plus: ^13.3.0
+  open_filex: ^4.7.0
 
 dev_dependencies:
   flutter_test:

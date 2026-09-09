@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../../controllers/admin_controller.dart';
+import '../../../../services/excel_export_service.dart';
+import '../../../warehouse/controllers/warehouse_controller.dart';
 
 class SalesAnalyticsTab extends StatefulWidget {
   const SalesAnalyticsTab({super.key});
@@ -78,23 +80,48 @@ class _SalesAnalyticsTabState extends State<SalesAnalyticsTab> {
                   ),
                 ],
               ),
-              // Duration Filter Pills
-              Container(
-                decoration: BoxDecoration(
-                  color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
-                  borderRadius: BorderRadius.circular(24),
-                  border: Border.all(color: Colors.grey.withValues(alpha: 0.2)),
-                ),
-                padding: const EdgeInsets.all(4),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    _buildDurationChip(context, controller, 'today', 'Today', selectedDuration),
-                    _buildDurationChip(context, controller, 'week', 'This Week', selectedDuration),
-                    _buildDurationChip(context, controller, 'month', 'This Month', selectedDuration),
-                    _buildDurationChip(context, controller, 'all', 'All Time', selectedDuration),
-                  ],
-                ),
+              // Action Controls (Duration Filter & Excel Export)
+              Wrap(
+                spacing: 12,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  Container(
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+                      borderRadius: BorderRadius.circular(24),
+                      border: Border.all(color: Colors.grey.withValues(alpha: 0.2)),
+                    ),
+                    padding: const EdgeInsets.all(4),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        _buildDurationChip(context, controller, 'today', 'Today', selectedDuration),
+                        _buildDurationChip(context, controller, 'week', 'This Week', selectedDuration),
+                        _buildDurationChip(context, controller, 'month', 'This Month', selectedDuration),
+                        _buildDurationChip(context, controller, 'all', 'All Time', selectedDuration),
+                      ],
+                    ),
+                  ),
+                  ElevatedButton.icon(
+                    onPressed: () {
+                      final warehouseController = context.read<WarehouseController>();
+                      ExcelExportService.exportSalesAnalytics(
+                        analytics: controller.analytics,
+                        durationFilter: selectedDuration,
+                        orders: warehouseController.orders,
+                        context: context,
+                      );
+                    },
+                    icon: const Icon(Icons.table_chart_rounded, size: 18),
+                    label: const Text('Export Excel'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF0F766E),
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),

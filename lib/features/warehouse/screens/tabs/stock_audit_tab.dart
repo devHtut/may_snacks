@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:may_snacks/models/product.dart';
 import 'package:may_snacks/models/batch.dart';
 import 'package:may_snacks/features/warehouse/controllers/warehouse_controller.dart';
+import 'package:may_snacks/services/excel_export_service.dart';
 
 class StockAuditTab extends StatefulWidget {
   const StockAuditTab({super.key});
@@ -203,10 +204,30 @@ class _StockAuditTabState extends State<StockAuditTab> {
               'Physical Inventory Audit Logs',
               style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
             ),
-            ElevatedButton.icon(
-              onPressed: _showNewAuditDialog,
-              icon: const Icon(Icons.fact_check_rounded),
-              label: const Text('Perform Stock Take / Audit'),
+            Wrap(
+              spacing: 10,
+              children: [
+                OutlinedButton.icon(
+                  onPressed: () {
+                    ExcelExportService.exportPhysicalAuditSheet(
+                      products: products,
+                      batches: batches,
+                      context: context,
+                    );
+                  },
+                  icon: const Icon(Icons.table_chart_rounded, size: 16),
+                  label: const Text('Export Audit Sheet'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: const Color(0xFF0F766E),
+                    side: const BorderSide(color: Color(0xFF0F766E)),
+                  ),
+                ),
+                ElevatedButton.icon(
+                  onPressed: _showNewAuditDialog,
+                  icon: const Icon(Icons.fact_check_rounded),
+                  label: const Text('Perform Stock Take / Audit'),
+                ),
+              ],
             ),
           ],
         ),

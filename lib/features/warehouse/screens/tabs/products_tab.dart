@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import 'package:may_snacks/models/product.dart';
 import 'package:may_snacks/features/warehouse/controllers/warehouse_controller.dart';
+import 'package:may_snacks/services/excel_export_service.dart';
 
 class ProductsTab extends StatefulWidget {
   const ProductsTab({super.key});
@@ -41,13 +42,42 @@ class _ProductsTabState extends State<ProductsTab> {
         .where((b) => b.quantity == 0)
         .toList();
 
-    return Row(
+    return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Product List (Left Panel)
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              'Products & Batch Ledger',
+              style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+            ),
+            ElevatedButton.icon(
+              onPressed: () {
+                ExcelExportService.exportStockBalance(
+                  products: products,
+                  batches: batches,
+                  context: context,
+                );
+              },
+              icon: const Icon(Icons.table_chart_rounded, size: 16),
+              label: const Text('Export Stock Balance'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF0F766E),
+                foregroundColor: Colors.white,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
         Expanded(
-          flex: 4,
-          child: Card(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Product List (Left Panel)
+              Expanded(
+                flex: 4,
+                child: Card(
             margin: EdgeInsets.zero,
             child: ListView.separated(
               itemCount: products.length,

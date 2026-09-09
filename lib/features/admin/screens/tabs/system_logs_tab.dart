@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../../controllers/admin_controller.dart';
 import 'package:may_snacks/models/audit_log.dart';
+import 'package:may_snacks/services/excel_export_service.dart';
 
 class SystemLogsTab extends StatefulWidget {
   const SystemLogsTab({super.key});
@@ -75,10 +76,30 @@ class _SystemLogsTabState extends State<SystemLogsTab> {
               'System Activity & Audit Logs',
               style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
             ),
-            IconButton(
-              icon: const Icon(Icons.refresh_rounded),
-              tooltip: 'Refresh Audit Logs',
-              onPressed: () => controller.loadAllAdminData(),
+            Row(
+              children: [
+                OutlinedButton.icon(
+                  onPressed: () {
+                    ExcelExportService.exportSystemLogs(
+                      logs: filteredLogs,
+                      context: context,
+                    );
+                  },
+                  icon: const Icon(Icons.table_chart_rounded, size: 16),
+                  label: const Text('Export Excel'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: const Color(0xFF0F766E),
+                    side: const BorderSide(color: Color(0xFF0F766E)),
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                IconButton(
+                  icon: const Icon(Icons.refresh_rounded),
+                  tooltip: 'Refresh Audit Logs',
+                  onPressed: () => controller.loadAllAdminData(),
+                ),
+              ],
             ),
           ],
         ),

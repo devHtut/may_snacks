@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import 'package:may_snacks/models/order.dart';
 import 'package:may_snacks/features/warehouse/controllers/warehouse_controller.dart';
+import 'package:may_snacks/services/excel_export_service.dart';
 
 class OrderAuditTab extends StatefulWidget {
   const OrderAuditTab({super.key});
@@ -80,6 +81,22 @@ class _OrderAuditTabState extends State<OrderAuditTab> {
                             _statusFilter = val;
                           });
                         },
+                      ),
+                      const SizedBox(width: 12),
+                      ElevatedButton.icon(
+                        onPressed: () {
+                          ExcelExportService.exportOrderAudit(
+                            orders: filteredOrders,
+                            context: context,
+                          );
+                        },
+                        icon: const Icon(Icons.table_chart_rounded, size: 16),
+                        label: const Text('Export Excel'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF0F766E),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        ),
                       ),
                     ],
                   ),

@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import 'package:may_snacks/models/product.dart';
 import 'package:may_snacks/features/warehouse/controllers/warehouse_controller.dart';
+import 'package:may_snacks/services/excel_export_service.dart';
 
 class StockInTab extends StatefulWidget {
   const StockInTab({super.key});
@@ -124,15 +125,35 @@ class _StockInTabState extends State<StockInTab> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        CircleAvatar(
-                          backgroundColor: theme.primaryColor.withOpacity(0.1),
-                          child: Icon(Icons.add_business_rounded, color: theme.primaryColor),
+                        Row(
+                          children: [
+                            CircleAvatar(
+                              backgroundColor: theme.primaryColor.withOpacity(0.1),
+                              child: Icon(Icons.add_business_rounded, color: theme.primaryColor),
+                            ),
+                            const SizedBox(width: 16),
+                            Text(
+                              'Stock In (New Batch Entry)',
+                              style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+                            ),
+                          ],
                         ),
-                        const SizedBox(width: 16),
-                        Text(
-                          'Stock In (New Batch Entry)',
-                          style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+                        OutlinedButton.icon(
+                          onPressed: () {
+                            ExcelExportService.exportStockInHistory(
+                              batches: controller.batches,
+                              products: products,
+                              context: context,
+                            );
+                          },
+                          icon: const Icon(Icons.table_chart_rounded, size: 16),
+                          label: const Text('Export History'),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: const Color(0xFF0F766E),
+                            side: const BorderSide(color: Color(0xFF0F766E)),
+                          ),
                         ),
                       ],
                     ),

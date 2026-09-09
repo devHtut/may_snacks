@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import 'package:may_snacks/models/customer.dart';
 import 'package:may_snacks/services/location_service.dart';
 import 'package:may_snacks/features/warehouse/controllers/warehouse_controller.dart';
+import 'package:may_snacks/services/excel_export_service.dart';
 
 class CustomerManagementTab extends StatefulWidget {
   const CustomerManagementTab({super.key});
@@ -309,10 +310,29 @@ class _CustomerManagementTabState extends State<CustomerManagementTab> {
                 'Customer Stores Master Management',
                 style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
               ),
-              ElevatedButton.icon(
-                onPressed: _showAddCustomerDialog,
-                icon: const Icon(Icons.add_location_alt_rounded),
-                label: const Text('Add Official Store'),
+              Wrap(
+                spacing: 10,
+                children: [
+                  OutlinedButton.icon(
+                    onPressed: () {
+                      ExcelExportService.exportCustomers(
+                        customers: controller.customers,
+                        context: context,
+                      );
+                    },
+                    icon: const Icon(Icons.table_chart_rounded, size: 18),
+                    label: const Text('Export Excel'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: const Color(0xFF0F766E),
+                      side: const BorderSide(color: Color(0xFF0F766E)),
+                    ),
+                  ),
+                  ElevatedButton.icon(
+                    onPressed: _showAddCustomerDialog,
+                    icon: const Icon(Icons.add_location_alt_rounded),
+                    label: const Text('Add Official Store'),
+                  ),
+                ],
               ),
             ],
           ),
