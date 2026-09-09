@@ -20,7 +20,8 @@ class ExpiryTrackingTab extends StatelessWidget {
     final expiringSoonBatches = activeBatches.where((b) => !b.isExpired && b.daysUntilExpiry <= 30).toList()
       ..sort((a, b) => a.expiryDate.compareTo(b.expiryDate));
 
-    final safeBatchesCount = activeBatches.length - expiredBatches.length - expiringSoonBatches.length;
+    final safeBatches = activeBatches.where((b) => !b.isExpired && b.daysUntilExpiry > 30).toList()
+      ..sort((a, b) => a.expiryDate.compareTo(b.expiryDate));
 
     return SingleChildScrollView(
       child: Column(
@@ -52,7 +53,7 @@ class ExpiryTrackingTab extends StatelessWidget {
               Expanded(
                 child: _buildMetricCard(
                   title: 'Safe Batches (> 30d)',
-                  count: safeBatchesCount,
+                  count: safeBatches.length,
                   icon: Icons.check_circle_rounded,
                   color: Colors.green,
                   context: context,
@@ -150,6 +151,88 @@ class ExpiryTrackingTab extends StatelessWidget {
                   ),
                 );
               },
+            ),
+
+          const SizedBox(height: 32),
+
+          // Safe Batches Section (Collapsible)
+          if (safeBatches.isNotEmpty)
+            Card(
+              margin: EdgeInsets.zero,
+              elevation: 0.5,
+              color: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+                side: BorderSide(color: Colors.green.withOpacity(0.3)),
+              ),
+              child: Theme(
+                data: theme.copyWith(dividerColor: Colors.transparent),
+                child: ExpansionTile(
+                  iconColor: Colors.green[800],
+                  collapsedIconColor: Colors.green[800],
+                  leading: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.green.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Icon(
+                      Icons.check_circle_rounded,
+                      color: Colors.green,
+                      size: 20,
+                    ),
+                  ),
+                  title: Text(
+                    'Safe Batches (> 30d remaining) (${safeBatches.length})',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                      color: Colors.green[900],
+                    ),
+                  ),
+                  subtitle: Text(
+                    'Normal stock batches with sufficient shelf life',
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: Colors.grey[600],
+                    ),
+                  ),
+                  childrenPadding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+                  children: safeBatches.map((batch) {
+                    final product = products.firstWhere(
+                      (p) => p.id == batch.productId,
+                      orElse: () => Product(id: '', name: 'Unknown Product', sku: '', price: 0, createdAt: DateTime.now()),
+                    );
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: Card(
+                        margin: EdgeInsets.zero,
+                        color: Colors.green.withOpacity(0.04),
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                          side: BorderSide(color: Colors.green.withOpacity(0.15)),
+                        ),
+                        child: ListTile(
+                          leading: const CircleAvatar(
+                            backgroundColor: Colors.green,
+                            child: Icon(Icons.check_rounded, color: Colors.white, size: 20),
+                          ),
+                          title: Text(
+                            '${product.name} (Batch: ${batch.batchNumber})',
+                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                          ),
+                          subtitle: Text('Expires on: ${DateFormat('yyyy-MM-dd').format(batch.expiryDate)} (${batch.daysUntilExpiry} days left)'),
+                          trailing: Text(
+                            'Qty: ${batch.quantity}',
+                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Colors.green),
+                          ),
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                ),
+              ),
             ),
         ],
       ),
