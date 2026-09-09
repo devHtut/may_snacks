@@ -50,7 +50,9 @@ class _ProductsTabState extends State<ProductsTab> {
           children: [
             Text(
               'Products & Batch Ledger',
-              style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
             ),
             ElevatedButton.icon(
               onPressed: () {
@@ -78,265 +80,280 @@ class _ProductsTabState extends State<ProductsTab> {
               Expanded(
                 flex: 4,
                 child: Card(
-            margin: EdgeInsets.zero,
-            child: ListView.separated(
-              itemCount: products.length,
-              separatorBuilder: (context, index) => const Divider(height: 1),
-              itemBuilder: (context, index) {
-                final product = products[index];
-                final isSelected = product.id == _selectedProduct?.id;
+                  margin: EdgeInsets.zero,
+                  child: ListView.separated(
+                    itemCount: products.length,
+                    separatorBuilder: (context, index) =>
+                        const Divider(height: 1),
+                    itemBuilder: (context, index) {
+                      final product = products[index];
+                      final isSelected = product.id == _selectedProduct?.id;
 
-                final physicalStock = controller.getPhysicalStock(product.id);
-                final reservedStock = controller.getReservedStock(product.id);
-                final availableStock = controller.getAvailableStock(product.id);
+                      final physicalStock = controller.getPhysicalStock(
+                        product.id,
+                      );
+                      final reservedStock = controller.getReservedStock(
+                        product.id,
+                      );
+                      final availableStock = controller.getAvailableStock(
+                        product.id,
+                      );
 
-                return ListTile(
-                  selected: isSelected,
-                  selectedTileColor: theme.primaryColor.withOpacity(0.05),
-                  title: Text(
-                    product.name,
-                    style: TextStyle(
-                      fontWeight: isSelected
-                          ? FontWeight.bold
-                          : FontWeight.normal,
-                    ),
-                  ),
-                  subtitle: Text(
-                    'SKU: ${product.sku} | Physical: $physicalStock | Price: ${NumberFormat.currency(symbol: 'Ks ', decimalDigits: 0).format(product.price)}',
-                  ),
-                  trailing: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 3,
-                        ),
-                        decoration: BoxDecoration(
-                          color: availableStock > 0
-                              ? Colors.green.withOpacity(0.1)
-                              : Colors.red.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Text(
-                          '$availableStock available',
+                      return ListTile(
+                        selected: isSelected,
+                        selectedTileColor: theme.primaryColor.withOpacity(0.05),
+                        title: Text(
+                          product.name,
                           style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold,
-                            color: availableStock > 0
-                                ? Colors.green[800]
-                                : Colors.red[800],
+                            fontWeight: isSelected
+                                ? FontWeight.bold
+                                : FontWeight.normal,
                           ),
                         ),
-                      ),
-                      if (reservedStock > 0)
-                        Padding(
-                          padding: const EdgeInsets.only(top: 2),
-                          child: Text(
-                            '($reservedStock reserved)',
-                            style: const TextStyle(
-                              fontSize: 10,
-                              color: Colors.orange,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
+                        subtitle: Text(
+                          'SKU: ${product.sku} | Physical: $physicalStock | Price: ${NumberFormat.currency(symbol: 'Ks ', decimalDigits: 0).format(product.price)}',
                         ),
-                    ],
-                  ),
-                  onTap: () {
-                    setState(() {
-                      _selectedProduct = product;
-                    });
-                  },
-                );
-              },
-            ),
-          ),
-        ),
-        const SizedBox(width: 24),
-        // Batches visual ledger (Right Panel)
-        Expanded(
-          flex: 6,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Card(
-                margin: EdgeInsets.zero,
-                color: theme.primaryColor.withOpacity(0.02),
-                child: Padding(
-                  padding: const EdgeInsets.all(20),
-                  child: Row(
-                    children: [
-                      CircleAvatar(
-                        radius: 28,
-                        backgroundColor: theme.primaryColor.withOpacity(0.1),
-                        child: Icon(
-                          Icons.inventory_2_rounded,
-                          color: theme.primaryColor,
-                          size: 28,
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                        trailing: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.end,
                           children: [
-                            Text(
-                              _selectedProduct?.name ?? '',
-                              style: theme.textTheme.titleLarge?.copyWith(
-                                fontWeight: FontWeight.bold,
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 3,
+                              ),
+                              decoration: BoxDecoration(
+                                color: availableStock > 0
+                                    ? Colors.green.withOpacity(0.1)
+                                    : Colors.red.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Text(
+                                '$availableStock available',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                  color: availableStock > 0
+                                      ? Colors.green[800]
+                                      : Colors.red[800],
+                                ),
                               ),
                             ),
-                            const SizedBox(height: 4),
-                            Text(
-                              'SKU: ${_selectedProduct?.sku ?? ''} | Master Cost: ${NumberFormat.currency(symbol: 'Ks ', decimalDigits: 0).format(_selectedProduct?.price ?? 0)}',
+                            if (reservedStock > 0)
+                              Padding(
+                                padding: const EdgeInsets.only(top: 2),
+                                child: Text(
+                                  '($reservedStock reserved)',
+                                  style: const TextStyle(
+                                    fontSize: 10,
+                                    color: Colors.orange,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
+                        onTap: () {
+                          setState(() {
+                            _selectedProduct = product;
+                          });
+                        },
+                      );
+                    },
+                  ),
+                ),
+              ),
+              const SizedBox(width: 24),
+              // Batches visual ledger (Right Panel)
+              Expanded(
+                flex: 6,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Card(
+                      margin: EdgeInsets.zero,
+                      color: theme.primaryColor.withOpacity(0.02),
+                      child: Padding(
+                        padding: const EdgeInsets.all(20),
+                        child: Row(
+                          children: [
+                            CircleAvatar(
+                              radius: 28,
+                              backgroundColor: theme.primaryColor.withOpacity(
+                                0.1,
+                              ),
+                              child: Icon(
+                                Icons.inventory_2_rounded,
+                                color: theme.primaryColor,
+                                size: 28,
+                              ),
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    _selectedProduct?.name ?? '',
+                                    style: theme.textTheme.titleLarge?.copyWith(
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    'SKU: ${_selectedProduct?.sku ?? ''} | Master Cost: ${NumberFormat.currency(symbol: 'Ks ', decimalDigits: 0).format(_selectedProduct?.price ?? 0)}',
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                              children: [
+                                Text(
+                                  'Physical: ${activeBatches.fold<int>(0, (sum, b) => sum + b.quantity)} | Reserved: ${controller.getReservedStock(_selectedProduct?.id ?? '')}',
+                                  style: const TextStyle(
+                                    fontSize: 11,
+                                    color: Colors.grey,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  '${controller.getAvailableStock(_selectedProduct?.id ?? '')} Available',
+                                  style: theme.textTheme.titleMedium?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                    color:
+                                        controller.getAvailableStock(
+                                              _selectedProduct?.id ?? '',
+                                            ) >
+                                            0
+                                        ? theme.primaryColor
+                                        : Colors.red,
+                                  ),
+                                ),
+                              ],
                             ),
                           ],
                         ),
                       ),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        children: [
-                          Text(
-                            'Physical: ${activeBatches.fold<int>(0, (sum, b) => sum + b.quantity)} | Reserved: ${controller.getReservedStock(_selectedProduct?.id ?? '')}',
-                            style: const TextStyle(
-                              fontSize: 11,
-                              color: Colors.grey,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            '${controller.getAvailableStock(_selectedProduct?.id ?? '')} Available',
-                            style: theme.textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.bold,
-                              color:
-                                  controller.getAvailableStock(
-                                        _selectedProduct?.id ?? '',
-                                      ) >
-                                      0
-                                  ? theme.primaryColor
-                                  : Colors.red,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(height: 24),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    'Stock Batches (Sorted by Expiry - FEFO)',
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
                     ),
-                  ),
-                  if (activeBatches.isNotEmpty)
-                    Text(
-                      '${activeBatches.length} active batch${activeBatches.length > 1 ? 'es' : ''}',
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              Expanded(
-                child: selectedProductBatches.isEmpty
-                    ? const Card(
-                        child: Center(
-                          child: Text(
-                            'No batches registered for this product yet. Use "Stock In" to add.',
+                    const SizedBox(height: 24),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Stock Batches (Sorted by Expiry - FEFO)',
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
                           ),
                         ),
-                      )
-                    : ListView(
-                        children: [
-                          if (activeBatches.isEmpty)
-                            const Card(
-                              margin: EdgeInsets.only(bottom: 12),
-                              child: Padding(
-                                padding: EdgeInsets.all(16),
-                                child: Center(
-                                  child: Text(
-                                    'No active stock available in batches right now.',
-                                    style: TextStyle(color: Colors.grey),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ...activeBatches.map(
-                            (batch) => Padding(
-                              padding: const EdgeInsets.only(bottom: 12),
-                              child: _buildBatchCard(batch, theme),
+                        if (activeBatches.isNotEmpty)
+                          Text(
+                            '${activeBatches.length} active batch${activeBatches.length > 1 ? 'es' : ''}',
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey,
+                              fontWeight: FontWeight.w500,
                             ),
                           ),
-                          if (depletedBatches.isNotEmpty)
-                            Card(
-                              margin: EdgeInsets.zero,
-                              elevation: 0.5,
-                              color: Colors.grey.withOpacity(0.05),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                                side: BorderSide(
-                                  color: Colors.grey.withOpacity(0.2),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Expanded(
+                      child: selectedProductBatches.isEmpty
+                          ? const Card(
+                              child: Center(
+                                child: Text(
+                                  'No batches registered for this product yet. Use "Stock In" to add.',
                                 ),
                               ),
-                              child: Theme(
-                                data: theme.copyWith(
-                                  dividerColor: Colors.transparent,
-                                ),
-                                child: ExpansionTile(
-                                  leading: const Icon(
-                                    Icons.archive_outlined,
-                                    size: 20,
-                                    color: Colors.black,
-                                  ),
-                                  title: Text(
-                                    'Depleted & Empty Batches (${depletedBatches.length})',
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.w600,
-                                      fontSize: 13,
-                                      color: Colors.black,
-                                    ),
-                                  ),
-                                  subtitle: const Text(
-                                    'Batches with 0 available quantity',
-                                    style: TextStyle(
-                                      fontSize: 11,
-                                      color: Colors.black,
-                                    ),
-                                  ),
-                                  childrenPadding: const EdgeInsets.fromLTRB(
-                                    12,
-                                    0,
-                                    12,
-                                    12,
-                                  ),
-                                  children: depletedBatches.map((batch) {
-                                    return Padding(
-                                      padding: const EdgeInsets.only(bottom: 8),
-                                      child: Opacity(
-                                        opacity: 0.7,
-                                        child: _buildBatchCard(
-                                          batch,
-                                          theme,
-                                          isDepleted: true,
+                            )
+                          : ListView(
+                              children: [
+                                if (activeBatches.isEmpty)
+                                  const Card(
+                                    margin: EdgeInsets.only(bottom: 12),
+                                    child: Padding(
+                                      padding: EdgeInsets.all(16),
+                                      child: Center(
+                                        child: Text(
+                                          'No active stock available in batches right now.',
+                                          style: TextStyle(color: Colors.grey),
                                         ),
                                       ),
-                                    );
-                                  }).toList(),
+                                    ),
+                                  ),
+                                ...activeBatches.map(
+                                  (batch) => Padding(
+                                    padding: const EdgeInsets.only(bottom: 12),
+                                    child: _buildBatchCard(batch, theme),
+                                  ),
                                 ),
-                              ),
+                                if (depletedBatches.isNotEmpty)
+                                  Card(
+                                    margin: EdgeInsets.zero,
+                                    elevation: 0.5,
+                                    color: Colors.grey.withOpacity(0.05),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                      side: BorderSide(
+                                        color: Colors.grey.withOpacity(0.2),
+                                      ),
+                                    ),
+                                    child: Theme(
+                                      data: theme.copyWith(
+                                        dividerColor: Colors.transparent,
+                                      ),
+                                      child: ExpansionTile(
+                                        leading: const Icon(
+                                          Icons.archive_outlined,
+                                          size: 20,
+                                          color: Colors.black,
+                                        ),
+                                        title: Text(
+                                          'Depleted & Empty Batches (${depletedBatches.length})',
+                                          style: const TextStyle(
+                                            fontWeight: FontWeight.w600,
+                                            fontSize: 13,
+                                            color: Colors.black,
+                                          ),
+                                        ),
+                                        subtitle: const Text(
+                                          'Batches with 0 available quantity',
+                                          style: TextStyle(
+                                            fontSize: 11,
+                                            color: Colors.black,
+                                          ),
+                                        ),
+                                        childrenPadding:
+                                            const EdgeInsets.fromLTRB(
+                                              12,
+                                              0,
+                                              12,
+                                              12,
+                                            ),
+                                        children: depletedBatches.map((batch) {
+                                          return Padding(
+                                            padding: const EdgeInsets.only(
+                                              bottom: 8,
+                                            ),
+                                            child: Opacity(
+                                              opacity: 0.7,
+                                              child: _buildBatchCard(
+                                                batch,
+                                                theme,
+                                                isDepleted: true,
+                                              ),
+                                            ),
+                                          );
+                                        }).toList(),
+                                      ),
+                                    ),
+                                  ),
+                              ],
                             ),
-                        ],
-                      ),
+                    ),
+                  ],
+                ),
               ),
             ],
           ),
