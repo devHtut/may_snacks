@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:may_snacks/models/product.dart';
 import 'package:may_snacks/features/warehouse/controllers/warehouse_controller.dart';
 import 'package:may_snacks/services/excel_export_service.dart';
+import 'package:may_snacks/common/widgets/excel_date_filter_dialog.dart';
 
 class StockInTab extends StatefulWidget {
   const StockInTab({super.key});
@@ -142,10 +143,19 @@ class _StockInTabState extends State<StockInTab> {
                         ),
                         OutlinedButton.icon(
                           onPressed: () {
-                            ExcelExportService.exportStockInHistory(
-                              batches: controller.batches,
-                              products: products,
-                              context: context,
+                            ExcelDateFilterDialog.show(
+                              context,
+                              title: 'Stock In History Export',
+                              reportSubtitle: 'Log of newly received product batches and initial quantities',
+                              onExport: (dateRange, durationLabel) async {
+                                await ExcelExportService.exportStockInHistory(
+                                  batches: controller.batches,
+                                  products: products,
+                                  dateRange: dateRange,
+                                  durationLabel: durationLabel,
+                                  context: context,
+                                );
+                              },
                             );
                           },
                           icon: const Icon(Icons.table_chart_rounded, size: 16),

@@ -114,25 +114,55 @@ class ExcelExportService {
     required Map<String, dynamic> analytics,
     required String durationFilter,
     required List<Order> orders,
+    DateTimeRange? dateRange,
+    String? durationLabel,
     BuildContext? context,
   }) async {
     final Workbook workbook = Workbook();
+
+    final filteredOrders = dateRange == null
+        ? orders
+        : orders.where((o) =>
+            o.createdAt.isAfter(dateRange.start.subtract(const Duration(seconds: 1))) &&
+            o.createdAt.isBefore(dateRange.end.add(const Duration(seconds: 1)))).toList();
+
+    final activeDuration = durationLabel ?? durationFilter;
+
+    // Recalculate metrics for filtered orders if dateRange is supplied
+    double totalRevenue = (analytics['totalRevenue'] as num?)?.toDouble() ?? 0.0;
+    int ordersCount = (analytics['ordersCount'] as num?)?.toInt() ?? 0;
+    Map<dynamic, dynamic> salesByProduct = analytics['salesByProduct'] as Map? ?? {};
+    Map<dynamic, dynamic> salesByStaff = analytics['salesByStaff'] as Map? ?? {};
+
+    if (dateRange != null) {
+      totalRevenue = filteredOrders.fold(0.0, (sum, o) => sum + o.totalAmount);
+      ordersCount = filteredOrders.length;
+      final pMap = <String, double>{};
+      final sMap = <String, double>{};
+      for (final o in filteredOrders) {
+        for (final item in o.items) {
+          final pName = item.productName ?? 'Product';
+          pMap[pName] = (pMap[pName] ?? 0.0) + (item.quantity * (item.productPrice ?? 0.0));
+        }
+        final staff = o.salesStaffId ?? 'General Sales';
+        sMap[staff] = (sMap[staff] ?? 0.0) + o.totalAmount;
+      }
+      salesByProduct = pMap;
+      salesByStaff = sMap;
+    }
+
+    final double avgOrderValue = ordersCount == 0 ? 0.0 : totalRevenue / ordersCount;
 
     // --- Sheet 1: Executive Summary ---
     final Worksheet summarySheet = workbook.worksheets[0];
     summarySheet.name = 'Sales Summary';
 
-
     _addReportBanner(
       summarySheet,
-      reportTitle: 'Sales Performance Analytics ($durationFilter)',
-      subtitle: 'Overview KPIs & Staff Performance',
+      reportTitle: 'Sales Performance Analytics ($activeDuration)',
+      subtitle: 'Overview KPIs & Staff Performance (Period: $activeDuration)',
       columnSpan: 5,
     );
-
-    final double totalRevenue = (analytics['totalRevenue'] as num?)?.toDouble() ?? 0.0;
-    final int ordersCount = (analytics['ordersCount'] as num?)?.toInt() ?? 0;
-    final double avgOrderValue = ordersCount == 0 ? 0.0 : totalRevenue / ordersCount;
 
     // KPI Box
     summarySheet.getRangeByIndex(5, 1).setText('KPI Metric');
@@ -143,7 +173,7 @@ class ExcelExportService {
       ['Total Revenue (Ks)', totalRevenue],
       ['Total Wholesale Orders', ordersCount],
       ['Average Order Value (Ks)', avgOrderValue],
-      ['Reporting Period', durationFilter.toUpperCase()],
+      ['Reporting Period', activeDuration.toUpperCase()],
     ];
 
     for (int r = 0; r < kpis.length; r++) {
@@ -160,7 +190,6 @@ class ExcelExportService {
     }
 
     // Top Products Table
-    final Map<dynamic, dynamic> salesByProduct = analytics['salesByProduct'] as Map? ?? {};
     final sortedProducts = salesByProduct.entries.toList()
       ..sort((a, b) => (b.value as num).compareTo(a.value as num));
 
@@ -180,7 +209,6 @@ class ExcelExportService {
     }
 
     // Sales By Staff Table
-    final Map<dynamic, dynamic> salesByStaff = analytics['salesByStaff'] as Map? ?? {};
     final sortedStaff = salesByStaff.entries.toList()
       ..sort((a, b) => (b.value as num).compareTo(a.value as num));
 
@@ -209,7 +237,7 @@ class ExcelExportService {
     _addReportBanner(
       ordersSheet,
       reportTitle: 'Wholesale Order Transactions',
-      subtitle: 'Complete list of orders in selected period',
+      subtitle: 'Period: $activeDuration | Total Orders: ${filteredOrders.length}',
       columnSpan: 7,
     );
 
@@ -217,8 +245,8 @@ class ExcelExportService {
     _styleHeaderRow(ordersSheet, 5, orderHeaders);
 
     final dateFormat = DateFormat('yyyy-MM-dd HH:mm');
-    for (int i = 0; i < orders.length; i++) {
-      final order = orders[i];
+    for (int i = 0; i < filteredOrders.length; i++) {
+      final order = filteredOrders[i];
       final r = 6 + i;
       final shortId = order.id.length > 8 ? order.id.substring(0, 8).toUpperCase() : order.id.toUpperCase();
 
@@ -253,7 +281,6 @@ class ExcelExportService {
     final Workbook workbook = Workbook();
     final Worksheet sheet = workbook.worksheets[0];
     sheet.name = 'Customers Directory';
-
 
     _addReportBanner(
       sheet,
@@ -295,17 +322,26 @@ class ExcelExportService {
   /// 3. Admin: Order Audit Logs
   static Future<String> exportOrderAudit({
     required List<Order> orders,
+    DateTimeRange? dateRange,
+    String? durationLabel,
     BuildContext? context,
   }) async {
     final Workbook workbook = Workbook();
     final Worksheet sheet = workbook.worksheets[0];
     sheet.name = 'Order Audit';
 
+    final filteredOrders = dateRange == null
+        ? orders
+        : orders.where((o) =>
+            o.createdAt.isAfter(dateRange.start.subtract(const Duration(seconds: 1))) &&
+            o.createdAt.isBefore(dateRange.end.add(const Duration(seconds: 1)))).toList();
+
+    final activeDuration = durationLabel ?? (dateRange != null ? '${DateFormat('yyyy-MM-dd').format(dateRange.start)} to ${DateFormat('yyyy-MM-dd').format(dateRange.end)}' : 'All Time');
 
     _addReportBanner(
       sheet,
       reportTitle: 'Wholesale Order Audit Log',
-      subtitle: 'Total Audited Orders: ${orders.length}',
+      subtitle: 'Period: $activeDuration | Total Audited Orders: ${filteredOrders.length}',
       columnSpan: 6,
     );
 
@@ -315,8 +351,8 @@ class ExcelExportService {
     final dateFormat = DateFormat('yyyy-MM-dd HH:mm');
     double grandTotal = 0;
 
-    for (int i = 0; i < orders.length; i++) {
-      final order = orders[i];
+    for (int i = 0; i < filteredOrders.length; i++) {
+      final order = filteredOrders[i];
       final r = 6 + i;
       grandTotal += order.totalAmount;
 
@@ -333,7 +369,7 @@ class ExcelExportService {
     }
 
     // Grand Total Row
-    final totalRowIdx = 6 + orders.length;
+    final totalRowIdx = 6 + filteredOrders.length;
     final summaryCell = sheet.getRangeByIndex(totalRowIdx, 1, totalRowIdx, 5);
     summaryCell.merge();
     summaryCell.setText('GRAND TOTAL:');
@@ -361,17 +397,26 @@ class ExcelExportService {
   /// 4. Admin: System Activity Logs
   static Future<String> exportSystemLogs({
     required List<AuditLog> logs,
+    DateTimeRange? dateRange,
+    String? durationLabel,
     BuildContext? context,
   }) async {
     final Workbook workbook = Workbook();
     final Worksheet sheet = workbook.worksheets[0];
     sheet.name = 'Activity Logs';
 
+    final filteredLogs = dateRange == null
+        ? logs
+        : logs.where((l) =>
+            l.createdAt.isAfter(dateRange.start.subtract(const Duration(seconds: 1))) &&
+            l.createdAt.isBefore(dateRange.end.add(const Duration(seconds: 1)))).toList();
+
+    final activeDuration = durationLabel ?? (dateRange != null ? '${DateFormat('yyyy-MM-dd').format(dateRange.start)} to ${DateFormat('yyyy-MM-dd').format(dateRange.end)}' : 'All Time');
 
     _addReportBanner(
       sheet,
       reportTitle: 'System Audit & Activity Logs',
-      subtitle: 'Total Recorded Logs: ${logs.length}',
+      subtitle: 'Period: $activeDuration | Total Recorded Logs: ${filteredLogs.length}',
       columnSpan: 5,
     );
 
@@ -379,8 +424,8 @@ class ExcelExportService {
     _styleHeaderRow(sheet, 5, headers);
 
     final dateFormat = DateFormat('yyyy-MM-dd HH:mm:ss');
-    for (int i = 0; i < logs.length; i++) {
-      final log = logs[i];
+    for (int i = 0; i < filteredLogs.length; i++) {
+      final log = filteredLogs[i];
       final r = 6 + i;
 
       sheet.getRangeByIndex(r, 1).setText(log.id);
@@ -608,21 +653,30 @@ class ExcelExportService {
   static Future<String> exportStockInHistory({
     required List<StockBatch> batches,
     required List<Product> products,
+    DateTimeRange? dateRange,
+    String? durationLabel,
     BuildContext? context,
   }) async {
     final Workbook workbook = Workbook();
     final Worksheet sheet = workbook.worksheets[0];
     sheet.name = 'Stock In History';
 
+    final filteredBatches = dateRange == null
+        ? batches
+        : batches.where((b) =>
+            b.receivedDate.isAfter(dateRange.start.subtract(const Duration(seconds: 1))) &&
+            b.receivedDate.isBefore(dateRange.end.add(const Duration(seconds: 1)))).toList();
+
+    final activeDuration = durationLabel ?? (dateRange != null ? '${DateFormat('yyyy-MM-dd').format(dateRange.start)} to ${DateFormat('yyyy-MM-dd').format(dateRange.end)}' : 'All Time');
 
     _addReportBanner(
       sheet,
       reportTitle: 'Stock In & Inbound Receiving Log',
-      subtitle: 'Complete history of product batches received into warehouse',
+      subtitle: 'Period: $activeDuration | Total Inbound Batches: ${filteredBatches.length}',
       columnSpan: 6,
     );
 
-    final sortedBatches = List<StockBatch>.from(batches)
+    final sortedBatches = List<StockBatch>.from(filteredBatches)
       ..sort((a, b) => b.receivedDate.compareTo(a.receivedDate));
 
     final headers = ['Batch #', 'Product Name', 'Received Qty', 'Received Date', 'Expiry Date', 'Remaining Qty'];

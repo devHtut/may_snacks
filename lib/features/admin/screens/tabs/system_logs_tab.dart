@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import '../../controllers/admin_controller.dart';
 import 'package:may_snacks/models/audit_log.dart';
 import 'package:may_snacks/services/excel_export_service.dart';
+import 'package:may_snacks/common/widgets/excel_date_filter_dialog.dart';
 
 class SystemLogsTab extends StatefulWidget {
   const SystemLogsTab({super.key});
@@ -80,9 +81,18 @@ class _SystemLogsTabState extends State<SystemLogsTab> {
               children: [
                 OutlinedButton.icon(
                   onPressed: () {
-                    ExcelExportService.exportSystemLogs(
-                      logs: filteredLogs,
-                      context: context,
+                    ExcelDateFilterDialog.show(
+                      context,
+                      title: 'System Logs Export',
+                      reportSubtitle: 'System audit trails, staff operations, and events',
+                      onExport: (dateRange, durationLabel) async {
+                        await ExcelExportService.exportSystemLogs(
+                          logs: filteredLogs,
+                          dateRange: dateRange,
+                          durationLabel: durationLabel,
+                          context: context,
+                        );
+                      },
                     );
                   },
                   icon: const Icon(Icons.table_chart_rounded, size: 16),

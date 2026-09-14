@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../../controllers/admin_controller.dart';
 import '../../../../services/excel_export_service.dart';
+import '../../../../common/widgets/excel_date_filter_dialog.dart';
 import '../../../warehouse/controllers/warehouse_controller.dart';
 
 class SalesAnalyticsTab extends StatefulWidget {
@@ -105,11 +106,20 @@ class _SalesAnalyticsTabState extends State<SalesAnalyticsTab> {
                   ElevatedButton.icon(
                     onPressed: () {
                       final warehouseController = context.read<WarehouseController>();
-                      ExcelExportService.exportSalesAnalytics(
-                        analytics: controller.analytics,
-                        durationFilter: selectedDuration,
-                        orders: warehouseController.orders,
-                        context: context,
+                      ExcelDateFilterDialog.show(
+                        context,
+                        title: 'Sales Analytics Export',
+                        reportSubtitle: 'Performance KPIs, top selling products, and staff breakdown',
+                        onExport: (dateRange, durationLabel) async {
+                          await ExcelExportService.exportSalesAnalytics(
+                            analytics: controller.analytics,
+                            durationFilter: selectedDuration,
+                            orders: warehouseController.orders,
+                            dateRange: dateRange,
+                            durationLabel: durationLabel,
+                            context: context,
+                          );
+                        },
                       );
                     },
                     icon: const Icon(Icons.table_chart_rounded, size: 18),

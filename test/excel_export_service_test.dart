@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:may_snacks/models/product.dart';
@@ -140,6 +141,45 @@ void main() {
       final path = await ExcelExportService.exportPhysicalAuditSheet(products: testProducts, batches: testBatches);
       expect(path, endsWith('.xlsx'));
       expect(File(path).existsSync(), isTrue);
+    });
+
+    test('exports Sales Analytics with DateTimeRange filter', () async {
+      final range = DateTimeRange(
+        start: DateTime(2026, 9, 1),
+        end: DateTime(2026, 9, 30, 23, 59, 59),
+      );
+      final path = await ExcelExportService.exportSalesAnalytics(
+        analytics: {},
+        durationFilter: 'custom',
+        orders: testOrders,
+        dateRange: range,
+        durationLabel: '2026-09-01 to 2026-09-30',
+      );
+      expect(path, endsWith('.xlsx'));
+      expect(File(path).existsSync(), isTrue);
+    });
+
+    test('exports Order Audit and Stock In with DateTimeRange filter', () async {
+      final range = DateTimeRange(
+        start: DateTime(2026, 9, 1),
+        end: DateTime(2026, 9, 10, 23, 59, 59),
+      );
+      final orderPath = await ExcelExportService.exportOrderAudit(
+        orders: testOrders,
+        dateRange: range,
+        durationLabel: '2026-09-01 to 2026-09-10',
+      );
+      expect(orderPath, endsWith('.xlsx'));
+      expect(File(orderPath).existsSync(), isTrue);
+
+      final stockInPath = await ExcelExportService.exportStockInHistory(
+        batches: testBatches,
+        products: testProducts,
+        dateRange: range,
+        durationLabel: '2026-09-01 to 2026-09-10',
+      );
+      expect(stockInPath, endsWith('.xlsx'));
+      expect(File(stockInPath).existsSync(), isTrue);
     });
   });
 }

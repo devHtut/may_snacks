@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:may_snacks/models/order.dart';
 import 'package:may_snacks/features/warehouse/controllers/warehouse_controller.dart';
 import 'package:may_snacks/services/excel_export_service.dart';
+import 'package:may_snacks/common/widgets/excel_date_filter_dialog.dart';
 
 class OrderAuditTab extends StatefulWidget {
   const OrderAuditTab({super.key});
@@ -85,9 +86,18 @@ class _OrderAuditTabState extends State<OrderAuditTab> {
                       const SizedBox(width: 12),
                       ElevatedButton.icon(
                         onPressed: () {
-                          ExcelExportService.exportOrderAudit(
-                            orders: filteredOrders,
-                            context: context,
+                          ExcelDateFilterDialog.show(
+                            context,
+                            title: 'Order Audit Export',
+                            reportSubtitle: 'Audited wholesale orders with item details and status',
+                            onExport: (dateRange, durationLabel) async {
+                              await ExcelExportService.exportOrderAudit(
+                                orders: filteredOrders,
+                                dateRange: dateRange,
+                                durationLabel: durationLabel,
+                                context: context,
+                              );
+                            },
                           );
                         },
                         icon: const Icon(Icons.table_chart_rounded, size: 16),
