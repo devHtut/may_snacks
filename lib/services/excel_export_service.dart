@@ -41,7 +41,7 @@ class ExcelExportService {
               );
             },
           ),
-          duration: const Duration(seconds: 4),
+          duration: const Duration(seconds: 2),
         ),
       );
     }

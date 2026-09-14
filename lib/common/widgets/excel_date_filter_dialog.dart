@@ -12,17 +12,17 @@ enum DateRangePreset {
   String get displayName {
     switch (this) {
       case DateRangePreset.allTime:
-        return 'All Time (အားလုံး)';
+        return 'All Time';
       case DateRangePreset.today:
-        return 'Today (ဒီနေ့)';
+        return 'Today';
       case DateRangePreset.thisWeek:
-        return 'This Week (ဒီအပတ်)';
+        return 'This Week';
       case DateRangePreset.thisMonth:
-        return 'This Month (ဒီလ)';
+        return 'This Month';
       case DateRangePreset.lastMonth:
-        return 'Last Month (ပြီးခဲ့သည့်လ)';
+        return 'Last Month';
       case DateRangePreset.custom:
-        return 'Custom Range (ရက်စွဲရွေးရန်)';
+        return 'Custom Range';
     }
   }
 }
@@ -187,7 +187,7 @@ class _ExcelDateFilterDialogState extends State<ExcelDateFilterDialog> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
-              'Select Export Date Range (ရက်စွဲအပိုင်းအခြား ရွေးချယ်ပါ):',
+              'Select Export Date Range:',
               style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
             ),
             const SizedBox(height: 12),
