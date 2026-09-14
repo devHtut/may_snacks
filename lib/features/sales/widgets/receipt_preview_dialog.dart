@@ -22,6 +22,7 @@ class ReceiptPreviewDialog extends StatefulWidget {
     Customer? customer,
     String? staffName,
   }) {
+    ScaffoldMessenger.of(context).clearSnackBars();
     return showDialog(
       context: context,
       builder: (context) => ReceiptPreviewDialog(
@@ -51,7 +52,7 @@ class _ReceiptPreviewDialogState extends State<ReceiptPreviewDialog> {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
       child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 500, maxHeight: 720),
+        constraints: const BoxConstraints(maxWidth: 520, maxHeight: 750),
         child: Column(
           children: [
             // Dialog Header
@@ -93,7 +94,7 @@ class _ReceiptPreviewDialogState extends State<ReceiptPreviewDialog> {
 
             // Paper Size Toggle Bar
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
               child: Row(
                 children: [
                   const Text(
@@ -124,11 +125,12 @@ class _ReceiptPreviewDialogState extends State<ReceiptPreviewDialog> {
 
             const Divider(height: 1),
 
-            // Live Receipt PDF Preview
+            // Live Receipt PDF Preview (High DPI for crystal clear rendering)
             Expanded(
               child: Container(
                 color: Colors.grey.shade100,
                 child: PdfPreview(
+                  dpi: 300,
                   build: (format) => ReceiptService.generateReceiptPdf(
                     order: widget.order,
                     customer: widget.customer,
@@ -140,8 +142,8 @@ class _ReceiptPreviewDialogState extends State<ReceiptPreviewDialog> {
                   canChangePageFormat: false,
                   canChangeOrientation: false,
                   canDebug: false,
-                  maxPageWidth: _paperSize == ReceiptPaperSize.mm58 ? 260 : 360,
-                  previewPageMargin: const EdgeInsets.all(12),
+                  maxPageWidth: _paperSize == ReceiptPaperSize.mm58 ? 290 : 380,
+                  previewPageMargin: const EdgeInsets.all(16),
                   scrollViewDecoration: BoxDecoration(
                     color: Colors.grey.shade200,
                   ),
@@ -155,14 +157,26 @@ class _ReceiptPreviewDialogState extends State<ReceiptPreviewDialog> {
 
             const Divider(height: 1),
 
-            // Action Buttons
+            // Action Buttons Bar
             Padding(
               padding: const EdgeInsets.all(12),
               child: Row(
                 children: [
+                  // Close Button
+                  OutlinedButton(
+                    onPressed: () => Navigator.pop(context),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                    child: const Text('Close'),
+                  ),
+                  const SizedBox(width: 10),
                   // Share as PDF button (for Viber, Telegram, etc.)
                   Expanded(
-                    child: OutlinedButton.icon(
+                    child: ElevatedButton.icon(
                       onPressed: _isActionInProgress
                           ? null
                           : () async {
@@ -182,7 +196,9 @@ class _ReceiptPreviewDialogState extends State<ReceiptPreviewDialog> {
                             },
                       icon: const Icon(Icons.share_rounded, size: 18),
                       label: const Text('Share PDF'),
-                      style: OutlinedButton.styleFrom(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF0F766E),
+                        foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(vertical: 12),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(10),
@@ -190,10 +206,9 @@ class _ReceiptPreviewDialogState extends State<ReceiptPreviewDialog> {
                       ),
                     ),
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: 10),
                   // Print Receipt Button
                   Expanded(
-                    flex: 2,
                     child: ElevatedButton.icon(
                       onPressed: _isActionInProgress
                           ? null
@@ -223,10 +238,12 @@ class _ReceiptPreviewDialogState extends State<ReceiptPreviewDialog> {
                             )
                           : const Icon(Icons.print_rounded, size: 18),
                       label: Text(
-                        _isActionInProgress ? 'Printing...' : 'Print Receipt',
+                        _isActionInProgress ? 'Printing...' : 'Print',
                         style: const TextStyle(fontWeight: FontWeight.bold),
                       ),
                       style: ElevatedButton.styleFrom(
+                        backgroundColor: theme.primaryColor,
+                        foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(vertical: 12),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(10),

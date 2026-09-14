@@ -34,20 +34,14 @@ class ExcelExportService {
     await file.writeAsBytes(bytes, flush: true);
 
     if (context != null && context.mounted) {
+      ScaffoldMessenger.of(context).clearSnackBars();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Excel exported to Downloads: $fileName'),
+          content: Text('Excel exported: $fileName'),
           backgroundColor: const Color(0xFF0F766E),
-          action: SnackBarAction(
-            label: 'Share',
-            textColor: Colors.white,
-            onPressed: () {
-              Share.shareXFiles(
-                [XFile(file.path)],
-                text: 'May Snacks Export: $fileName',
-              );
-            },
-          ),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          margin: const EdgeInsets.all(16),
           duration: const Duration(seconds: 2),
         ),
       );

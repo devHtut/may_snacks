@@ -1,5 +1,8 @@
+import 'dart:io';
 import 'dart:typed_data';
 import 'package:intl/intl.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:open_filex/open_filex.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
@@ -362,18 +365,48 @@ class ReceiptService {
     ReceiptPaperSize paperSize = ReceiptPaperSize.mm58,
   }) async {
     final rollWidth = paperSize == ReceiptPaperSize.mm58 ? 58 * PdfPageFormat.mm : 80 * PdfPageFormat.mm;
-    await Printing.layoutPdf(
-      name: 'Receipt_${order.id.substring(0, 8)}',
-      format: PdfPageFormat(rollWidth, double.infinity, marginAll: 8),
-      onLayout: (PdfPageFormat format) async {
-        return generateReceiptPdf(
-          order: order,
-          customer: customer,
-          staffName: staffName,
-          paperSize: paperSize,
-        );
-      },
-    );
+    try {
+      final success = await Printing.layoutPdf(
+        name: 'Receipt_${order.id.substring(0, 8)}',
+        format: PdfPageFormat(rollWidth, double.infinity, marginAll: 8),
+        onLayout: (PdfPageFormat format) async {
+          return generateReceiptPdf(
+            order: order,
+            customer: customer,
+            staffName: staffName,
+            paperSize: paperSize,
+          );
+        },
+      );
+      if (!success && (Platform.isMacOS || Platform.isWindows || Platform.isLinux)) {
+        await _openReceiptInSystemViewer(order, customer, staffName, paperSize);
+      }
+    } catch (_) {
+      if (Platform.isMacOS || Platform.isWindows || Platform.isLinux) {
+        await _openReceiptInSystemViewer(order, customer, staffName, paperSize);
+      }
+    }
+  }
+
+  static Future<void> _openReceiptInSystemViewer(
+    Order order,
+    Customer? customer,
+    String? staffName,
+    ReceiptPaperSize paperSize,
+  ) async {
+    try {
+      final pdfBytes = await generateReceiptPdf(
+        order: order,
+        customer: customer,
+        staffName: staffName,
+        paperSize: paperSize,
+      );
+      final tempDir = await getTemporaryDirectory();
+      final shortId = order.id.length > 8 ? order.id.substring(0, 8) : order.id;
+      final file = File('${tempDir.path}/MaySnacks_Receipt_$shortId.pdf');
+      await file.writeAsBytes(pdfBytes, flush: true);
+      await OpenFilex.open(file.path);
+    } catch (_) {}
   }
 
   /// Share receipt as PDF file via System Share (e.g., Viber, Telegram, Email)
