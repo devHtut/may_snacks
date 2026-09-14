@@ -21,7 +21,14 @@ class ExcelExportService {
     String fileName, {
     BuildContext? context,
   }) async {
-    final directory = await getApplicationDocumentsDirectory();
+    Directory? directory;
+    try {
+      if (Platform.isMacOS || Platform.isWindows || Platform.isLinux) {
+        directory = await getDownloadsDirectory();
+      }
+    } catch (_) {}
+    directory ??= await getApplicationDocumentsDirectory();
+
     final path = directory.path;
     final file = File('$path/$fileName');
     await file.writeAsBytes(bytes, flush: true);
@@ -29,7 +36,7 @@ class ExcelExportService {
     if (context != null && context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Excel exported: $fileName'),
+          content: Text('Excel exported to Downloads: $fileName'),
           backgroundColor: const Color(0xFF0F766E),
           action: SnackBarAction(
             label: 'Share',
