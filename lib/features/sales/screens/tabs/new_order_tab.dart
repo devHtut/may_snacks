@@ -247,89 +247,91 @@ class _NewOrderTabState extends State<NewOrderTab> {
       builder: (context) {
         return AlertDialog(
           title: Text('Set Quantity - ${product.name}'),
-          content: Form(
-            key: inputFormKey,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    const Icon(
-                      Icons.inventory_2_outlined,
-                      size: 18,
-                      color: Colors.grey,
-                    ),
-                    const SizedBox(width: 6),
-                    Text(
-                      totalStock > 0
-                          ? 'Available Stock: $totalStock units'
-                          : 'Item is Out of Stock',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: totalStock > 0 ? Colors.grey[700] : Colors.red,
+          content: SingleChildScrollView(
+            child: Form(
+              key: inputFormKey,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(
+                        Icons.inventory_2_outlined,
+                        size: 18,
+                        color: Colors.grey,
                       ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                TextFormField(
-                  controller: qtyController,
-                  autofocus: true,
-                  keyboardType: TextInputType.number,
-                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                  decoration: const InputDecoration(
-                    labelText: 'Enter Units Quantity *',
-                    hintText: 'e.g. 100',
-                    suffixText: 'pcs',
-                    prefixIcon: Icon(Icons.edit_note_rounded),
+                      const SizedBox(width: 6),
+                      Text(
+                        totalStock > 0
+                            ? 'Available Stock: $totalStock units'
+                            : 'Item is Out of Stock',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: totalStock > 0 ? Colors.grey[700] : Colors.red,
+                        ),
+                      ),
+                    ],
                   ),
-                  validator: (v) {
-                    if (v != null && v.trim().isNotEmpty) {
-                      final val = int.tryParse(v.trim());
-                      if (val == null || val < 0) {
-                        return 'Please enter a valid positive number';
-                      }
-                      if (val > totalStock) {
-                        return 'Quantity cannot exceed available stock ($totalStock units)';
-                      }
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 16),
-                const Text(
-                  'Quick Bulk Selection:',
-                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 8),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: [10, 30, 50, 100, 200, 500].map((preset) {
-                    final isOverStock = preset > totalStock;
-                    return ActionChip(
-                      avatar: const Icon(Icons.add, size: 14),
-                      label: Text('$preset'),
-                      onPressed: () {
-                        if (isOverStock && totalStock > 0) {
-                          qtyController.text = '$totalStock';
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(
-                                'Selected preset exceeds available stock. Capped to $totalStock units.',
-                              ),
-                              duration: const Duration(seconds: 2),
-                            ),
-                          );
-                        } else {
-                          qtyController.text = '$preset';
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: qtyController,
+                    autofocus: true,
+                    keyboardType: TextInputType.number,
+                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                    decoration: const InputDecoration(
+                      labelText: 'Enter Units Quantity *',
+                      hintText: 'e.g. 100',
+                      suffixText: 'pcs',
+                      prefixIcon: Icon(Icons.edit_note_rounded),
+                    ),
+                    validator: (v) {
+                      if (v != null && v.trim().isNotEmpty) {
+                        final val = int.tryParse(v.trim());
+                        if (val == null || val < 0) {
+                          return 'Please enter a valid positive number';
+                          }
+                        if (val > totalStock) {
+                          return 'Quantity cannot exceed available stock ($totalStock units)';
                         }
-                      },
-                    );
-                  }).toList(),
-                ),
-              ],
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'Quick Bulk Selection:',
+                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [10, 30, 50, 100, 200, 500].map((preset) {
+                      final isOverStock = preset > totalStock;
+                      return ActionChip(
+                        avatar: const Icon(Icons.add, size: 14),
+                        label: Text('$preset'),
+                        onPressed: () {
+                          if (isOverStock && totalStock > 0) {
+                            qtyController.text = '$totalStock';
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  'Selected preset exceeds available stock. Capped to $totalStock units.',
+                                ),
+                                duration: const Duration(seconds: 2),
+                              ),
+                            );
+                          } else {
+                            qtyController.text = '$preset';
+                          }
+                        },
+                      );
+                    }).toList(),
+                  ),
+                ],
+              ),
             ),
           ),
           actions: [
