@@ -46,3 +46,9 @@ app.*.map.json
 
 # Credentials and secrets
 lib/config/supabase_config.dart
+
+# Project drafts, coursework, and scripts
+tmp/
+output/
+coursework/
+*.sql
